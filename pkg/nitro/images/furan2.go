@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"path/filepath"
-	"strings"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	furan "github.com/dollarshaveclub/furan/v2/pkg/client"
-	"github.com/dollarshaveclub/furan/v2/pkg/generated/furanrpc"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	furan "github.com/Pluto-tv/furan/v2/pkg/client"
+	"github.com/Pluto-tv/furan/v2/pkg/generated/furanrpc"
 )
 
 type Furan2BuilderBackend struct {
@@ -44,15 +42,14 @@ func NewFuran2BuilderBackend(addr, apikey string, ghappInstID int64, skipVerifyT
 }
 
 // BuildImage synchronously builds the image using Furan, returning when the build completes.
-func (fib *Furan2BuilderBackend) BuildImage(ctx context.Context, envName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
+func (fib *Furan2BuilderBackend) BuildImage(ctx context.Context, envName, depName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
 	logger := eventlogger.GetLogger(ctx)
-
-	// Furan 2 (via BuildKit) only supports image builds with files named "Dockerfile" or "dockerfile"
-	if ops.DockerfilePath != "" && !strings.Contains(ops.DockerfilePath, "Dockerfile") && !strings.Contains(ops.DockerfilePath, "dockerfile") {
-		return fmt.Errorf("image build requires a file named Dockerfile or dockerfile")
+	if ops.DockerfilePath == "" {
+		ops.DockerfilePath = "."
 	}
-	ops.DockerfilePath = filepath.Dir(ops.DockerfilePath)
-
+	if ops.DockerfileName == "" {
+		ops.DockerfileName = "Dockerfile"
+	}
 	if ops.BuildArgs == nil {
 		ops.BuildArgs = make(map[string]string)
 	}
@@ -63,14 +60,19 @@ func (fib *Furan2BuilderBackend) BuildImage(ctx context.Context, envName, github
 		return fmt.Errorf("error creating github app installation token: %w", err)
 	}
 
-	req := furanrpc.BuildRequest{
+	req := &furanrpc.BuildRequest{
 		Build: &furanrpc.BuildDefinition{
 			GithubRepo:       githubRepo,
 			GithubCredential: tkn,
 			Ref:              ref,
 			Tags:             []string{ref},
 			DockerfilePath:   ops.DockerfilePath,
+			DockerfileName:   ops.DockerfileName,
 			Args:             ops.BuildArgs,
+			Resources:        &furanrpc.BuildResources{},
+			CacheOptions: &furanrpc.BuildCacheOpts{
+				Type: furanrpc.BuildCacheOpts_S3, // temporarily hardcoded to use s3 cache
+			},
 		},
 		Push: &furanrpc.PushDefinition{
 			Registries: []*furanrpc.PushRegistryDefinition{
@@ -101,6 +103,8 @@ func (fib *Furan2BuilderBackend) BuildImage(ctx context.Context, envName, github
 			}
 			continue
 		}
+
+		eventlogger.GetLogger(ctx).SetImageBuildID(depName, id)
 
 		mbc, err := fib.rb.MonitorBuild(ctx, id)
 		if err != nil {

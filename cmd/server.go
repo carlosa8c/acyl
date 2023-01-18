@@ -1,3 +1,4 @@
+//go:build linux || darwin || freebsd || netbsd || openbsd
 // +build linux darwin freebsd netbsd openbsd
 
 package cmd
@@ -13,27 +14,29 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/api"
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/ghevent"
-	"github.com/dollarshaveclub/acyl/pkg/locker"
-	"github.com/dollarshaveclub/acyl/pkg/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/namegen"
-	nitroenv "github.com/dollarshaveclub/acyl/pkg/nitro/env"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/images"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/meta"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metahelm"
-	nitrometrics "github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/notifier"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	"github.com/dollarshaveclub/acyl/pkg/reap"
-	"github.com/dollarshaveclub/acyl/pkg/slacknotifier"
+	"github.com/Pluto-tv/acyl/pkg/api"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/ghevent"
+	"github.com/Pluto-tv/acyl/pkg/locker"
+	"github.com/Pluto-tv/acyl/pkg/metrics"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/namegen"
+	nitroenv "github.com/Pluto-tv/acyl/pkg/nitro/env"
+	"github.com/Pluto-tv/acyl/pkg/nitro/images"
+	"github.com/Pluto-tv/acyl/pkg/nitro/meta"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metahelm"
+	nitrometrics "github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/nitro/notifier"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/reap"
+	"github.com/Pluto-tv/acyl/pkg/slacknotifier"
+	furan "github.com/Pluto-tv/furan/v2/pkg/client"
 	"github.com/nlopes/slack"
 	"github.com/spf13/cobra"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -65,20 +68,56 @@ var serverCmd = &cobra.Command{
 	},
 }
 
+var mockDataFile, mockUser string
+var mockRepos []string
+var readOnly bool
+
+func addUIFlags(cmd *cobra.Command) {
+	brj, err := json.Marshal(&config.DefaultUIBranding)
+	if err != nil {
+		log.Fatalf("error marshaling default UI branding: %v", err)
+	}
+	// UI path precendence:
+	// 1. /opt/ui  (HIGHEST) - we're probably running in a Docker container
+	// 2. ./ui - running in the root of the git repo, use what's locally here
+	// 3. XDG_DATA_DIRS[0]/acyl/ui - Unix-like OS with preference set
+	// 4. /usr/local/share/acyl/ui - No preference set, setting this and hoping for the best
+	var uipath string
+	_, err = os.Stat("/opt/ui")
+	_, err2 := os.Stat("./ui")
+	switch {
+	case err == nil:
+		uipath = "/opt/ui"
+	case err2 == nil:
+		uipath = "./ui"
+	case os.Getenv("XDG_DATA_DIRS") != "":
+		uipath = filepath.Join(strings.SplitN(os.Getenv("XDG_DATA_DIRS"), ":", 2)[0], "acyl", "ui")
+	default:
+		uipath = "/usr/local/share/acyl/ui"
+	}
+	cmd.PersistentFlags().StringVar(&serverConfig.UIBaseURL, "ui-base-url", "", "External base URL (https://somedomain.com) for UI links")
+	cmd.PersistentFlags().StringVar(&serverConfig.UIPath, "ui-path", uipath, "Local filesystem path to UI assets")
+	cmd.PersistentFlags().StringVar(&serverConfig.UIBaseRoute, "ui-base-route", "/ui", "Base prefix for UI HTTP routes")
+	cmd.PersistentFlags().StringVar(&serverConfig.UIBrandingJSON, "ui-branding", string(brj), "Branding JSON configuration (see doc)")
+	cmd.PersistentFlags().BoolVar(&githubConfig.OAuth.Enforce, "ui-enforce-oauth", false, "Enforce GitHub App OAuth authn/authz for UI routes")
+	cmd.PersistentFlags().StringVar(&mockDataFile, "mock-data", "testdata/data.json", "Path to mock data file")
+	cmd.PersistentFlags().StringVar(&mockUser, "mock-user", "bobsmith", "Mock username (for sessions)")
+	cmd.PersistentFlags().StringSliceVar(&mockRepos, "mock-repos", []string{"acme/microservice", "acme/widgets", "acme/customers"}, "Mock repo read write permissions (for session user)")
+	cmd.PersistentFlags().BoolVar(&readOnly, "mock-read-only", false, "Mock repo override to read only permissions (for session user)")
+}
+
 func init() {
 	serverCmd.PersistentFlags().UintVar(&serverConfig.HTTPSPort, "https-port", 4000, "REST HTTP(S) TCP port")
 	serverCmd.PersistentFlags().StringVar(&serverConfig.HTTPSAddr, "https-addr", "0.0.0.0", "REST HTTP(S) listen address")
 	serverCmd.PersistentFlags().BoolVar(&serverConfig.DisableTLS, "disable-tls", false, "Disable TLS for the REST HTTP(S) server")
 	serverCmd.PersistentFlags().StringVar(&githubConfig.TypePath, "repo-type-path", "acyl.yml", "Relative path within the target repo to look for the type definition")
 	serverCmd.PersistentFlags().StringVar(&serverConfig.WordnetPath, "wordnet-path", "/opt/words.json.gz", "Path to gzip-compressed JSON wordnet file")
-	serverCmd.PersistentFlags().StringSliceVar(&serverConfig.FuranAddrs, "furan-addrs", []string{}, "Furan hosts")
-	serverCmd.PersistentFlags().BoolVar(&serverConfig.EnableFuran2, "use-furan2", false, "Enable Furan 2 image builder")
 	serverCmd.PersistentFlags().BoolVar(&serverConfig.Furan2SkipVerifyTLS, "furan2-disable-tls-verification", false, "Disable Furan 2 TLS verification (FOR TESTING PURPOSES ONLY)")
 	serverCmd.PersistentFlags().StringVar(&serverConfig.Furan2Addr, "furan2-addr", "", "Furan2 host:port")
-	serverCmd.PersistentFlags().StringVar(&slackConfig.Channel, "slack-channel", "dyn-qa-notifications", "Slack channel for notifications")
+	serverCmd.PersistentFlags().StringVar(&slackConfig.Channel, "slack-channel", "dqa-notifications", "Slack channel for notifications")
 	serverCmd.PersistentFlags().StringVar(&slackConfig.Username, "slack-username", "Acyl Environment Notifier", "Slack username for notifications")
 	serverCmd.PersistentFlags().StringVar(&slackConfig.IconURL, "slack-icon-url", "https://picsum.photos/48/48", "Slack user avatar icon for notifications")
-	serverCmd.PersistentFlags().StringVar(&slackConfig.MapperRepo, "slack-mapper-repo", "dollarshaveclub/dqa-dev-tools", "Github repo containing github -> slack username map")
+	serverCmd.PersistentFlags().StringVar(&slackConfig.MapperRepo, "slack-mapper-repo", "Pluto-tv/devops-slack-mapper", "Github repo containing github -> slack username map")
 	serverCmd.PersistentFlags().StringVar(&slackConfig.MapperRepoRef, "slack-mapper-repo-ref", "master", "Ref for username map Github repo")
 	serverCmd.PersistentFlags().StringVar(&slackConfig.MapperMapPath, "slack-mapper-map-path", "lib/user_map.json", "Path to username map JSON within the Github repo")
 	serverCmd.PersistentFlags().UintVar(&slackConfig.MapperUpdateIntervalSeconds, "slack-mapper-update-interval-seconds", 60, "Username map update interval")
@@ -91,10 +130,10 @@ func init() {
 	serverCmd.PersistentFlags().StringVar(&serverConfig.NotificationsDefaultsJSON, "nitro-notifications-defaults-json", "{}", "JSON-encoded notifications defaults for Nitro")
 	serverCmd.PersistentFlags().StringVar(&k8sGroupBindingsStr, "k8s-group-bindings", "", "optional k8s RBAC group bindings (comma-separated) for new environment namespaces in GROUP1=CLUSTER_ROLE1,GROUP2=CLUSTER_ROLE2 format (ex: users=edit) (Nitro)")
 	serverCmd.PersistentFlags().StringVar(&k8sSecretsStr, "k8s-secret-injections", "", "optional k8s secret injections (comma-separated) for new environment namespaces in SECRET_NAME=VAULT_ID (Vault path using secrets mapping) format. Secret value in Vault must be a JSON-encoded object with two keys: 'data' (map of string to base64-encoded bytes), 'type' (string). (Nitro)")
-	serverCmd.PersistentFlags().StringVar(&k8sPrivilegedReposStr, "k8s-privileged-repo-whitelist", "dollarshaveclub/acyl", "optional comma-separated whitelist of GitHub repositories whose environment service accounts will be allowed cluster-admin privileges (Nitro)")
-	serverCmd.PersistentFlags().StringVarP(&dogstatsdAddr, "dogstatsd-addr", "q", "127.0.0.1:8125", "Address of dogstatsd for metrics (set to empty string to disable)")
+	serverCmd.PersistentFlags().StringVar(&k8sPrivilegedReposStr, "k8s-privileged-repo-whitelist", "Pluto-tv/acyl", "optional comma-separated whitelist of GitHub repositories whose environment service accounts will be allowed cluster-admin privileges (Nitro)")
+	serverCmd.PersistentFlags().StringVarP(&dogstatsdAddr, "dogstatsd-addr", "q", "", "Address of dogstatsd for metrics (set to enable, e.g. 127.0.0.1:8125)")
 	serverCmd.PersistentFlags().StringVar(&dogstatsdTags, "dogstatsd-tags", "", "Comma-separated list of tags to add to dogstatsd metrics (TAG:VALUE)")
-	serverCmd.PersistentFlags().StringVar(&datadogTracingAgentAddr, "datadog-tracing-agent-addr", "127.0.0.1:8126", "Address of datadog tracing agent (set to empty string to disable)")
+	serverCmd.PersistentFlags().StringVar(&datadogTracingAgentAddr, "datadog-tracing-agent-addr", "", "Address of datadog tracing agent (set to enable, e.g. 127.0.0.1:8126)")
 	serverCmd.PersistentFlags().StringVar(&datadogServiceName, "datadog-service-name", "acyl", "Default service name to be used for Datadog APM")
 	serverCmd.PersistentFlags().DurationVar(&serverConfig.OperationTimeoutOverride, "operation-timeout-override", 0, "Override for operation timeout (ex: 10m)")
 	serverCmd.PersistentFlags().Int64Var(&reaperLockKey, "reaper-lock-key", 0, "Lock key that the reaper process should attempt to obtain")
@@ -177,36 +216,25 @@ func server(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Furan vs Furan 2
-	var ibb images.BuilderBackend
-	if serverConfig.EnableFuran2 {
-		// we need an *installation* github client for the furan 2 builder
-		rci, err := ghclient.NewGithubInstallationClient(githubConfig)
-		if err != nil {
-			log.Fatalf("error getting github installation client: %v", err)
-		}
-		var f2tls string
-		if serverConfig.Furan2SkipVerifyTLS {
-			f2tls = " (TLS verification DISABLED! THIS IS INSECURE!)"
-		}
-		log.Printf("using furan2 at %v for image builds%v", serverConfig.Furan2Addr, f2tls)
-		fbb, err := images.NewFuran2BuilderBackend(serverConfig.Furan2Addr, serverConfig.Furan2APIKey, int64(githubConfig.OAuth.AppInstallationID), serverConfig.Furan2SkipVerifyTLS, dl, rci, mc)
-		if err != nil {
-			log.Fatalf("error getting Furan 2 image builder backend: %v", err)
-		}
-		ibb = fbb
-	} else {
-		log.Printf("falling back to legacy furan 1 at %v for image builds", serverConfig.FuranAddrs)
-		fbb, err := images.NewFuranBuilderBackend(serverConfig.FuranAddrs, dl, mc, os.Stderr, datadogServiceName)
-		if err != nil {
-			log.Fatalf("error getting Furan image builder backend: %v", err)
-		}
-		ibb = fbb
+	// Furan 2
+	// we need an *installation* github client for the furan 2 builder
+	rci, err := ghclient.NewGithubInstallationClient(githubConfig)
+	if err != nil {
+		log.Fatalf("error getting github installation client: %v", err)
+	}
+	var f2tls string
+	if serverConfig.Furan2SkipVerifyTLS {
+		f2tls = " (TLS verification DISABLED! THIS IS INSECURE!)"
+	}
+	log.Printf("using furan2 at %v for image builds%v", serverConfig.Furan2Addr, f2tls)
+	fbb, err := images.NewFuran2BuilderBackend(serverConfig.Furan2Addr, serverConfig.Furan2APIKey, int64(githubConfig.OAuth.AppInstallationID), serverConfig.Furan2SkipVerifyTLS, dl, rci, mc)
+	if err != nil {
+		log.Fatalf("error getting Furan 2 image builder backend: %v", err)
 	}
 	ib := &images.ImageBuilder{
 		DL:      dl,
 		MC:      nmc,
-		Backend: ibb,
+		Backend: fbb,
 	}
 
 	fs := osfs.New("")
@@ -322,6 +350,15 @@ func server(cmd *cobra.Command, args []string) {
 		DatadogServiceName: apiServiceName,
 		KubernetesReporter: ci,
 	}
+	fc, err := furan.New(furan.Options{
+		Address:               serverConfig.Furan2Addr,
+		APIKey:                serverConfig.Furan2APIKey,
+		TLSInsecureSkipVerify: serverConfig.Furan2SkipVerifyTLS,
+	})
+	if err != nil {
+		log.Fatalf("error creating Furan 2 client: %v", err)
+	}
+	deps.Furan2Client = fc
 	regops := []api.RegisterOption{
 		api.WithAPIKeys(serverConfig.APIKeys),
 		api.WithUIBaseURL(serverConfig.UIBaseURL),

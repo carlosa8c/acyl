@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/pkg/errors"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 
 	"github.com/docker/docker/api/types"
 )
@@ -25,19 +24,19 @@ func (fdc *fakeDockerClient) ImageBuild(ctx context.Context, buildContext io.Rea
 	if fdc.ImageBuildFunc != nil {
 		return fdc.ImageBuildFunc(ctx, buildContext, options)
 	}
-	return types.ImageBuildResponse{Body: ioutil.NopCloser(&bytes.Buffer{})}, nil
+	return types.ImageBuildResponse{Body: io.NopCloser(&bytes.Buffer{})}, nil
 }
 func (fdc *fakeDockerClient) ImagePush(ctx context.Context, image string, options types.ImagePushOptions) (io.ReadCloser, error) {
 	if fdc.ImagePushFunc != nil {
 		return fdc.ImagePushFunc(ctx, image, options)
 	}
-	return ioutil.NopCloser(&bytes.Buffer{}), nil
+	return io.NopCloser(&bytes.Buffer{}), nil
 }
 
 func TestDockerBackendBuild(t *testing.T) {
 	var tname string
 	createtf := func() {
-		tf, err := ioutil.TempFile("", "*.tar.gz")
+		tf, err := os.CreateTemp("", "*.tar.gz")
 		if err != nil {
 			t.Fatalf("error creating temp file: %v", err)
 		}
@@ -66,14 +65,14 @@ func TestDockerBackendBuild(t *testing.T) {
 				if builderr {
 					return types.ImageBuildResponse{}, errors.New("build failure")
 				}
-				return types.ImageBuildResponse{Body: ioutil.NopCloser(&bytes.Buffer{})}, nil
+				return types.ImageBuildResponse{Body: io.NopCloser(&bytes.Buffer{})}, nil
 			},
 			ImagePushFunc: func(ctx context.Context, image string, options types.ImagePushOptions) (io.ReadCloser, error) {
 				pushed = true
 				if pusherr {
 					return nil, errors.New("push failure")
 				}
-				return ioutil.NopCloser(&bytes.Buffer{}), nil
+				return io.NopCloser(&bytes.Buffer{}), nil
 			},
 		},
 		DL: persistence.NewFakeDataLayer(),
@@ -85,7 +84,7 @@ func TestDockerBackendBuild(t *testing.T) {
 	}
 	createtf()
 	defer os.Remove(tname)
-	err := dbb.BuildImage(context.Background(), "some-name", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
+	err := dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
 	if err != nil {
 		t.Fatalf("build should have succeeded: %v", err)
 	}
@@ -98,7 +97,7 @@ func TestDockerBackendBuild(t *testing.T) {
 	createtf()
 	defer os.Remove(tname)
 	builderr = true
-	err = dbb.BuildImage(context.Background(), "some-name", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
 	if err == nil {
 		t.Fatalf("build should have failed")
 	}
@@ -107,7 +106,7 @@ func TestDockerBackendBuild(t *testing.T) {
 	built = false
 	builderr = false
 	dbb.Push = true
-	err = dbb.BuildImage(context.Background(), "some-name", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
 	if err != nil {
 		t.Fatalf("build should have succeeded: %v", err)
 	}
@@ -120,13 +119,38 @@ func TestDockerBackendBuild(t *testing.T) {
 	createtf()
 	defer os.Remove(tname)
 	pusherr = true
-	err = dbb.BuildImage(context.Background(), "some-name", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets", "quay.io/acme/widgets", "asdf", BuildOptions{})
 	if err == nil {
 		t.Fatalf("build should have failed")
 	}
 	createtf()
 	defer os.Remove(tname)
-	err = dbb.BuildImage(context.Background(), "some-name", "acme/widgets", "privateregistry.io/acme/widgets", "asdf", BuildOptions{})
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets", "privateregistry.io/acme/widgets", "asdf", BuildOptions{})
+	if err == nil {
+		t.Fatalf("build should have failed with missing auth")
+	}
+	createtf()
+	defer os.Remove(tname)
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets-dfp", "privateregistry.io/acme/widgets", "asdf", BuildOptions{
+		DockerfileName: "Dockerfile-foo",
+	})
+	if err == nil {
+		t.Fatalf("build should have failed with missing auth")
+	}
+	createtf()
+	defer os.Remove(tname)
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets-dfn", "privateregistry.io/acme/widgets", "asdf", BuildOptions{
+		DockerfilePath: "foo/bar",
+	})
+	if err == nil {
+		t.Fatalf("build should have failed with missing auth")
+	}
+	createtf()
+	defer os.Remove(tname)
+	err = dbb.BuildImage(context.Background(), "some-name", "acme-widgets", "acme/widgets-dfp-dfn", "privateregistry.io/acme/widgets", "asdf", BuildOptions{
+		DockerfilePath: "foo/bar",
+		DockerfileName: "dockerfile-foo",
+	})
 	if err == nil {
 		t.Fatalf("build should have failed with missing auth")
 	}

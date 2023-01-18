@@ -1,25 +1,32 @@
 package orm
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 )
 
 type manyModel struct {
 	*sliceTableModel
-	rel *Relation
+	baseTable *Table
+	rel       *Relation
 
 	buf       []byte
 	dstValues map[string][]reflect.Value
 }
 
-var _ tableModel = (*manyModel)(nil)
+var _ TableModel = (*manyModel)(nil)
 
 func newManyModel(j *join) *manyModel {
+	baseTable := j.BaseModel.Table()
 	joinModel := j.JoinModel.(*sliceTableModel)
-	dstValues := dstValues(joinModel, j.BaseModel.Table().PKs)
+	dstValues := dstValues(joinModel, j.Rel.FKValues)
+	if len(dstValues) == 0 {
+		return nil
+	}
 	m := manyModel{
 		sliceTableModel: joinModel,
+		baseTable:       baseTable,
 		rel:             j.Rel,
 
 		dstValues: dstValues,
@@ -45,7 +52,9 @@ func (m *manyModel) AddModel(model ColumnScanner) error {
 	m.buf = modelId(m.buf[:0], m.strct, m.rel.FKs)
 	dstValues, ok := m.dstValues[string(m.buf)]
 	if !ok {
-		return fmt.Errorf("pg: can't find dst value for model id=%q", m.buf)
+		return fmt.Errorf(
+			"pg: relation=%q has no base model=%q with id=%q (check join conditions)",
+			m.rel.Field.GoName, m.baseTable.TypeName, m.buf)
 	}
 
 	for _, v := range dstValues {
@@ -59,47 +68,47 @@ func (m *manyModel) AddModel(model ColumnScanner) error {
 	return nil
 }
 
-func (m *manyModel) AfterQuery(db DB) error {
-	if !m.rel.JoinTable.HasFlag(AfterQueryHookFlag) {
-		return nil
-	}
-
-	var retErr error
-	for _, slices := range m.dstValues {
-		for _, slice := range slices {
-			err := callAfterQueryHookSlice(slice, m.sliceOfPtr, db)
-			if err != nil && retErr == nil {
-				retErr = err
+func (m *manyModel) AfterQuery(c context.Context, db DB) error {
+	if m.rel.JoinTable.HasFlag(AfterQueryHookFlag) {
+		var firstErrr error
+		for _, slices := range m.dstValues {
+			for _, slice := range slices {
+				err := callAfterQueryHookSlice(slice, m.sliceOfPtr, c, db)
+				if err != nil && firstErrr == nil {
+					firstErrr = err
+				}
 			}
 		}
+		return firstErrr
 	}
-	return retErr
-}
 
-func (m *manyModel) AfterSelect(db DB) error {
 	return nil
 }
 
-func (m *manyModel) BeforeInsert(db DB) error {
+func (m *manyModel) AfterSelect(c context.Context, db DB) error {
 	return nil
 }
 
-func (m *manyModel) AfterInsert(db DB) error {
+func (m *manyModel) BeforeInsert(c context.Context, db DB) error {
 	return nil
 }
 
-func (m *manyModel) BeforeUpdate(db DB) error {
+func (m *manyModel) AfterInsert(c context.Context, db DB) error {
 	return nil
 }
 
-func (m *manyModel) AfterUpdate(db DB) error {
+func (m *manyModel) BeforeUpdate(c context.Context, db DB) error {
 	return nil
 }
 
-func (m *manyModel) BeforeDelete(db DB) error {
+func (m *manyModel) AfterUpdate(c context.Context, db DB) error {
 	return nil
 }
 
-func (m *manyModel) AfterDelete(db DB) error {
+func (m *manyModel) BeforeDelete(c context.Context, db DB) error {
+	return nil
+}
+
+func (m *manyModel) AfterDelete(c context.Context, db DB) error {
 	return nil
 }

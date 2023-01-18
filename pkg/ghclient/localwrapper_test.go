@@ -10,7 +10,7 @@ import (
 	"gopkg.in/src-d/go-billy.v4/osfs"
 	git "gopkg.in/src-d/go-git.v4"
 
-	"github.com/dollarshaveclub/acyl/pkg/memfs"
+	"github.com/Pluto-tv/acyl/pkg/memfs"
 	billy "gopkg.in/src-d/go-billy.v4"
 	gitplumb "gopkg.in/src-d/go-git.v4/plumbing"
 	gitcache "gopkg.in/src-d/go-git.v4/plumbing/cache"
@@ -352,23 +352,23 @@ func TestLocalWrapperThisAcylRepo(t *testing.T) {
 	}
 	lw := &LocalWrapper{
 		FSFunc:      func(path string) billy.Filesystem { return osfs.New(path) },
-		RepoPathMap: map[string]string{"dollarshaveclub/acyl": p},
+		RepoPathMap: map[string]string{"Pluto-tv/acyl": p},
 	}
-	bl, err := lw.GetBranches(context.Background(), "dollarshaveclub/acyl")
+	bl, err := lw.GetBranches(context.Background(), "Pluto-tv/acyl")
 	if err != nil {
 		t.Fatalf("branches should have succeeded: %v", err)
 	}
 	t.Logf("# branches: %v\n", len(bl))
 	// arbitrary commit SHA
-	msg, err := lw.GetCommitMessage(context.Background(), "dollarshaveclub/acyl", "516d472b0ae6292fcd6b07350734ca0268747659")
+	msg, err := lw.GetCommitMessage(context.Background(), "Pluto-tv/acyl", "516d472b0ae6292fcd6b07350734ca0268747659")
 	if err != nil {
 		t.Fatalf("commit msg should have succeeded: %v", err)
 	}
 	if msg != "only load db secrets, fix error msg\n" {
 		t.Fatalf("bad commit msg: %v", msg)
 	}
-	lw.WorkingTreeRepos = []string{"dollarshaveclub/acyl"}
-	contents, err := lw.GetDirectoryContents(context.Background(), "dollarshaveclub/acyl", "", "516d472b0ae6292fcd6b07350734ca0268747659")
+	lw.WorkingTreeRepos = []string{"Pluto-tv/acyl"}
+	contents, err := lw.GetDirectoryContents(context.Background(), "Pluto-tv/acyl", "", "516d472b0ae6292fcd6b07350734ca0268747659")
 	if err != nil {
 		t.Fatalf("get dir contents should have succeeded: %v", err)
 	}

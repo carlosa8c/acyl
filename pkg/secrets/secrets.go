@@ -6,16 +6,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/pvc"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/pvc"
 	"github.com/pkg/errors"
 )
 
 // Secret IDs
 // These will be interpolated as .ID in the secrets mapping
 const (
-	githubHookSecretid         = "github/hook_secret"
-	githubTokenid              = "github/token"
+	githubHookSecret           = "github/hook_secret"
+	githubToken                = "github/token"
 	githubAppID                = "github/app/id"
 	githubAppPK                = "github/app/private_key"
 	githubAppHookSecret        = "github/app/hook_secret"
@@ -25,12 +25,12 @@ const (
 	githubOAuthCookieEncKey    = "github/app/oauth/cookie/encryption_key"
 	githubOAuthCookieAuthKey   = "github/app/oauth/cookie/authentication_key"
 	githubOAuthUserTokenEncKey = "github/app/oauth/user_token/encryption_key"
-	apiKeysid                  = "api_keys"
-	slackTokenid               = "slack/token"
-	tlsCertid                  = "tls/cert"
-	tlsKeyid                   = "tls/key"
-	dbURIid                    = "db/uri"
-	furan2apikey               = "furan2/api_key"
+	acylApiKeys                = "acyl/api_keys"
+	slackToken                 = "slack/token"
+	tlsCert                    = "tls/cert"
+	tlsKey                     = "tls/key"
+	dbURI                      = "db/uri"
+	furan2ApiKey               = "furan2/api_key"
 )
 
 type SecretFetcher interface {
@@ -70,7 +70,7 @@ func (psf *PVCSecretsFetcher) PopulateAllSecrets(gh *config.GithubConfig, slack 
 
 // PopulatePG populates postgres secrets into pg
 func (psf *PVCSecretsFetcher) PopulatePG(pg *config.PGConfig) error {
-	s, err := psf.sc.Get(dbURIid)
+	s, err := psf.sc.Get(dbURI)
 	if err != nil {
 		return errors.Wrap(err, "error getting DB URI")
 	}
@@ -80,12 +80,12 @@ func (psf *PVCSecretsFetcher) PopulatePG(pg *config.PGConfig) error {
 
 // PopulateGithub populates Github secrets into gh
 func (psf *PVCSecretsFetcher) PopulateGithub(gh *config.GithubConfig) error {
-	s, err := psf.sc.Get(githubHookSecretid)
+	s, err := psf.sc.Get(githubHookSecret)
 	if err != nil {
 		return errors.Wrap(err, "error getting GitHub hook secret")
 	}
 	gh.HookSecret = string(s)
-	s, err = psf.sc.Get(githubTokenid)
+	s, err = psf.sc.Get(githubToken)
 	if err != nil {
 		return errors.Wrap(err, "error getting GitHub token")
 	}
@@ -165,7 +165,7 @@ func (psf *PVCSecretsFetcher) PopulateGithub(gh *config.GithubConfig) error {
 
 // PopulateSlack populates Slack secrets into slack
 func (psf *PVCSecretsFetcher) PopulateSlack(slack *config.SlackConfig) error {
-	s, err := psf.sc.Get(slackTokenid)
+	s, err := psf.sc.Get(slackToken)
 	if err != nil {
 		return errors.Wrap(err, "error getting Slack token")
 	}
@@ -175,18 +175,18 @@ func (psf *PVCSecretsFetcher) PopulateSlack(slack *config.SlackConfig) error {
 
 // PopulateServer populates server secrets into srv
 func (psf *PVCSecretsFetcher) PopulateServer(srv *config.ServerConfig) error {
-	s, err := psf.sc.Get(apiKeysid)
+	s, err := psf.sc.Get(acylApiKeys)
 	if err != nil {
 		return errors.Wrap(err, "error getting API keys")
 	}
 	srv.APIKeys = strings.Split(string(s), ",")
 	if !srv.DisableTLS {
-		s, err = psf.sc.Get(tlsCertid)
+		s, err = psf.sc.Get(tlsCert)
 		if err != nil {
 			return errors.Wrap(err, "error getting TLS certificate")
 		}
 		c := s
-		s, err = psf.sc.Get(tlsKeyid)
+		s, err = psf.sc.Get(tlsKey)
 		if err != nil {
 			return errors.Wrap(err, "error getting TLS key")
 		}
@@ -197,12 +197,10 @@ func (psf *PVCSecretsFetcher) PopulateServer(srv *config.ServerConfig) error {
 		}
 		srv.TLSCert = cert
 	}
-	if srv.EnableFuran2 {
-		s, err = psf.sc.Get(furan2apikey)
-		if err != nil {
-			return errors.Wrap(err, "error getting Furan 2 API key")
-		}
-		srv.Furan2APIKey = string(s)
+	s, err = psf.sc.Get(furan2ApiKey)
+	if err != nil {
+		return errors.Wrap(err, "error getting Furan 2 API key")
 	}
+	srv.Furan2APIKey = string(s)
 	return nil
 }

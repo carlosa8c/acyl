@@ -6,7 +6,7 @@ Copypasta from testhelper/localdb to avoid import cycle
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -16,7 +16,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var testlogger = log.New(ioutil.Discard, "", log.LstdFlags)
+var testlogger = log.New(io.Discard, "", log.LstdFlags)
 var testDataPath = "./testdata/db.json"
 
 // LocalDB is an object that manages a locally running database
@@ -35,7 +35,7 @@ func (ldb *LocalDB) MustRun() {
 	}
 	if os.Getenv("POSTGRES_ALREADY_RUNNING") == "" {
 		ldb.lf("starting postgres\n")
-		cmd := exec.Command("docker", "run", "-d", "--name", "postgres", "-p", "5432:5432", "-e", "POSTGRES_USER=acyl", "-e", "POSTGRES_PASSWORD=acyl", "postgres:9.6")
+		cmd := exec.Command("docker", "run", "-d", "--name", "postgres", "-p", "5432:5432", "-e", "POSTGRES_USER=acyl", "-e", "POSTGRES_PASSWORD=acyl", "postgres:12-alpine")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			fail("error encountered while starting postgres: %v: %s\n", err, string(out))

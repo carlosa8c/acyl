@@ -3,8 +3,9 @@ package eventlogger
 import (
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
+	guuid "github.com/gofrs/uuid"
 )
 
 // SetNewStatus creates a new empty event status of etype with only config.type, config.status and config.started set. This is intended to be called first and prior to config processing.
@@ -97,6 +98,13 @@ func (l *Logger) SetImageStarted(name string) {
 	}
 }
 
+// SetImageBuildID sets the Furan image build ID
+func (l *Logger) SetImageBuildID(name string, furanBuildID guuid.UUID) {
+	if err := l.DL.SetEventStatusImageBuildID(l.ID, name, furanBuildID); err != nil {
+		l.Printf("error setting image build id: %v: %v", name, err)
+	}
+}
+
 // SetImageStarted marks the image build for the named dependency to completed (name is assumed to exist) and optionally with error if the build failed
 func (l *Logger) SetImageCompleted(name string, err bool) {
 	if err2 := l.DL.SetEventStatusImageCompleted(l.ID, name, err); err2 != nil {
@@ -126,7 +134,7 @@ func (l *Logger) SetCompletedStatus(status models.EventStatus) {
 }
 
 // SetFailedStatus marks the entire event as completed with a failed status. This is intended to be called once at the end of event processing.
-func (l *Logger) SetFailedStatus(ce metahelm.ChartError) {
+func (l *Logger) SetFailedStatus(ce metahelmlib.ChartError) {
 	if err := l.DL.SetEventStatusFailed(l.ID, ce); err != nil {
 		l.Printf("error setting event status to failed: %v", err)
 	}

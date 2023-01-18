@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/DavidHuie/gomigrate"
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/secrets"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/secrets"
 	"github.com/spf13/cobra"
 
 	"database/sql"
@@ -26,7 +26,7 @@ var pgURIFromVault bool
 func init() {
 	pgMigrateCmd.PersistentFlags().StringVar(
 		&migrationsPGConfig.PostgresURI, "postgres-uri",
-		"postgresql://acyl:acyl@localhost:5432?sslmode=disable",
+		os.Getenv("DB_URI"),
 		"the address to the Postgres database",
 	)
 	pgMigrateCmd.PersistentFlags().StringVar(

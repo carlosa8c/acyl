@@ -3,7 +3,7 @@ package images
 import (
 	"context"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 )
 
 // FakeImageBuilder satisfies the Builder interface but does nothing
@@ -59,6 +59,6 @@ type NoneBackend struct {
 
 var _ BuilderBackend = &NoneBackend{}
 
-func (nb *NoneBackend) BuildImage(ctx context.Context, envName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
+func (nb *NoneBackend) BuildImage(ctx context.Context, envName, depName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
 	return nil
 }

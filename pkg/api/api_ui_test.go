@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -18,9 +18,9 @@ import (
 	"github.com/gorilla/securecookie"
 	"github.com/pkg/errors"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 )
 
 func randomCookieKey() [32]byte {
@@ -316,7 +316,7 @@ func TestUI_AuthCallbackHandler(t *testing.T) {
 		return req
 	}
 	defaultvalidateHandler := func(w http.ResponseWriter, r *http.Request) {
-		b, _ := ioutil.ReadAll(r.Body)
+		b, _ := io.ReadAll(r.Body)
 		r.Body.Close()
 		reqform, err := url.ParseQuery(string(b))
 		if err != nil {

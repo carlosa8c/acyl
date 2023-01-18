@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dollarshaveclub/pvc"
+	"github.com/Pluto-tv/pvc"
 	"github.com/pkg/errors"
 )
 
@@ -17,8 +17,6 @@ type ServerConfig struct {
 	DisableTLS                 bool
 	TLSCert                    tls.Certificate
 	WordnetPath                string
-	FuranAddrs                 []string
-	EnableFuran2               bool
 	Furan2Addr                 string
 	Furan2APIKey               string
 	Furan2SkipVerifyTLS        bool
@@ -216,7 +214,7 @@ var DefaultUIBranding = UIBrandingConfig{
 	LogoURL:    "https://s3.amazonaws.com/dsc-misc/img/acyl.png",
 	LogoHeight: "30",
 	LogoStyle:  "d-inline-block align-top mr-1",
-	LogoLink:   "https://github.com/dollarshaveclub/acyl",
+	LogoLink:   "https://github.com/Pluto-tv/acyl",
 	LogoAlt:    "Acyl Chloride",
 	Title:      "Acyl UI",
 }

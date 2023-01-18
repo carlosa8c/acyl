@@ -3,25 +3,24 @@ package meta
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/memfs"
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/memfs"
+	"github.com/Pluto-tv/acyl/pkg/models"
 	"github.com/pkg/errors"
 )
 
 func readFiles() (map[string][]byte, error) {
-	files, err := ioutil.ReadDir("./testdata/")
+	files, err := os.ReadDir("./testdata/")
 	if err != nil {
 		return nil, fmt.Errorf("error reading directory: %w", err)
 	}
 	out := make(map[string][]byte, len(files))
 	for _, f := range files {
-		d, err := ioutil.ReadFile("./testdata/" + f.Name())
+		d, err := os.ReadFile("./testdata/" + f.Name())
 		if err != nil {
 			return nil, fmt.Errorf("error reading file: %v: %w", f.Name(), err)
 		}
@@ -168,7 +167,7 @@ func TestMetaGetterGetV2(t *testing.T) {
 }
 
 func TestMetaGetterGetV1(t *testing.T) {
-	d, err := ioutil.ReadFile("./testdata/acyl-v1.yml")
+	d, err := os.ReadFile("./testdata/acyl-v1.yml")
 	if err != nil {
 		t.Fatalf("read file failed: %v", err)
 	}

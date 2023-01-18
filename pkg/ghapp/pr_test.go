@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
 
 	"github.com/google/go-github/github"
 
 	"github.com/google/uuid"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/palantir/go-githubapp/githubapp"
 )
 

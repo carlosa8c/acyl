@@ -3,11 +3,11 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +58,7 @@ func ref(cmd *cobra.Command, args []string) {
 	if err != nil {
 		clierr("error performing http request: %v", err)
 	}
-	rb, _ := ioutil.ReadAll(resp.Body)
+	rb, _ := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		clierr("status code indicates failure: %v: %v", resp.StatusCode, string(rb))

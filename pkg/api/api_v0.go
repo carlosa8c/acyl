@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	stdlog "log"
 	"net/http"
 	"os"
@@ -12,21 +12,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghapp"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	nitroerrors "github.com/dollarshaveclub/acyl/pkg/nitro/errors"
+	"github.com/Pluto-tv/acyl/pkg/ghapp"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	nitroerrors "github.com/Pluto-tv/acyl/pkg/nitro/errors"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/ghevent"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	ncontext "github.com/dollarshaveclub/acyl/pkg/nitro/context"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	"github.com/dollarshaveclub/acyl/pkg/spawner"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/ghevent"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	ncontext "github.com/Pluto-tv/acyl/pkg/nitro/context"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/spawner"
 	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/ext"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
@@ -280,7 +280,7 @@ func (api *v0api) legacyGithubWebhookHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}()
 
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		api.badRequestError(w, err)
 		return

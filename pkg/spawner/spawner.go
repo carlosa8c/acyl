@@ -1,7 +1,7 @@
 package spawner
 
 import (
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 	"golang.org/x/net/context"
 )
 

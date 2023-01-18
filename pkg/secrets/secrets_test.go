@@ -2,16 +2,16 @@ package secrets
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/pvc"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/pvc"
 )
 
 const (
 	testSecretsJSONfile = "testdata/fakesecrets.json"
-	testSecretPrefix    = "secret/qa/acyl/"
+	testSecretPrefix    = "secret/app/test-acyl/"
 )
 
 var testGithubConfig = &config.GithubConfig{}
@@ -20,7 +20,7 @@ var testServerConfig = &config.ServerConfig{}
 var testPGConfig = &config.PGConfig{}
 
 func readSecretsJSON(t *testing.T) map[string]string {
-	d, err := ioutil.ReadFile(testSecretsJSONfile)
+	d, err := os.ReadFile(testSecretsJSONfile)
 	if err != nil {
 		t.Fatalf("error reading secrets json file: %v", err)
 	}
@@ -43,13 +43,13 @@ func TestSecretsPopulateAllSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("should have succeeded: %v", err)
 	}
-	if testGithubConfig.HookSecret != sm[testSecretPrefix+githubHookSecretid] {
+	if testGithubConfig.HookSecret != sm[testSecretPrefix+githubHookSecret] {
 		t.Fatalf("bad value for github hook secret: %v", testGithubConfig.HookSecret)
 	}
-	if testSlackConfig.Token != sm[testSecretPrefix+slackTokenid] {
+	if testSlackConfig.Token != sm[testSecretPrefix+slackToken] {
 		t.Fatalf("bad value for slack token: %v", testSlackConfig.Token)
 	}
-	if testPGConfig.PostgresURI != sm[testSecretPrefix+dbURIid] {
+	if testPGConfig.PostgresURI != sm[testSecretPrefix+dbURI] {
 		t.Fatalf("bad value for db uri: %v", testPGConfig.PostgresURI)
 	}
 }

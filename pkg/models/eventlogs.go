@@ -9,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
+	guuid "github.com/gofrs/uuid"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -143,7 +144,7 @@ type EventStatusSummaryConfig struct {
 	Type            EventStatusType          `json:"type"`
 	Status          EventStatus              `json:"status"`
 	RenderedStatus  RenderedEventStatus      `json:"rendered_status"`
-	FailedResources metahelm.ChartError      `json:"failed_resources"`
+	FailedResources metahelmlib.ChartError   `json:"failed_resources"`
 	EnvName         string                   `json:"env_name"`
 	K8sNamespace    string                   `json:"k8s_ns"`
 	TriggeringRepo  string                   `json:"triggering_repo"`
@@ -158,10 +159,11 @@ type EventStatusSummaryConfig struct {
 }
 
 type EventStatusTreeNodeImage struct {
-	Name      string    `json:"name"`
-	Error     bool      `json:"error"`
-	Completed time.Time `json:"completed"`
-	Started   time.Time `json:"started"`
+	Name      string     `json:"name"`
+	ID        guuid.UUID `json:"id"`
+	Error     bool       `json:"error"`
+	Completed time.Time  `json:"completed"`
+	Started   time.Time  `json:"started"`
 }
 
 type EventStatusTreeNodeChart struct {

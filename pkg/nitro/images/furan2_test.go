@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	"github.com/dollarshaveclub/furan/v2/pkg/generated/furanrpc"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	"github.com/Pluto-tv/furan/v2/pkg/generated/furanrpc"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -48,6 +48,14 @@ func (ffs *FakeFuran2Server) CancelBuild(context.Context, *furanrpc.BuildCancelR
 
 func (ffs *FakeFuran2Server) ListBuilds(context.Context, *furanrpc.ListBuildsRequest) (*furanrpc.ListBuildsResponse, error) {
 	return &furanrpc.ListBuildsResponse{}, nil
+}
+
+func (ffs *FakeFuran2Server) GetBuildEvents(_ context.Context, req *furanrpc.BuildStatusRequest) (*furanrpc.BuildEventsResponse, error) {
+	return &furanrpc.BuildEventsResponse{
+		BuildId:      req.BuildId,
+		CurrentState: furanrpc.BuildState_SUCCESS,
+		Messages:     []string{"foo", "bar", "baz"},
+	}, nil
 }
 
 func randomTLSCert() (*tls.Certificate, error) {
@@ -120,7 +128,29 @@ func TestFuran2ImageBackendBuildImage(t *testing.T) {
 		t.Fatalf("error creating backend: %v", err)
 	}
 
-	err = fbb.BuildImage(context.Background(), "something-random", "acme/foo", "quay.io/foo/bar", "master", BuildOptions{})
+	err = fbb.BuildImage(context.Background(), "something-random", "acme-foo", "acme/foo", "quay.io/foo/bar", "master", BuildOptions{})
+	if err != nil {
+		t.Fatalf("failed: %v", err)
+	}
+
+	err = fbb.BuildImage(context.Background(), "something-random", "acme-foo", "acme/foo-dfn", "quay.io/foo/bar", "master", BuildOptions{
+		DockerfileName: "dockerfile-foo",
+	})
+	if err != nil {
+		t.Fatalf("failed: %v", err)
+	}
+
+	err = fbb.BuildImage(context.Background(), "something-random", "acme-foo", "acme/foo-dfp", "quay.io/foo/bar", "master", BuildOptions{
+		DockerfilePath: "foo/bar",
+	})
+	if err != nil {
+		t.Fatalf("failed: %v", err)
+	}
+
+	err = fbb.BuildImage(context.Background(), "something-random", "acme-foo", "acme/foo-dfn-dfp", "quay.io/foo/bar", "master", BuildOptions{
+		DockerfileName: "dockerfile-foo",
+		DockerfilePath: "foo/bar",
+	})
 	if err != nil {
 		t.Fatalf("failed: %v", err)
 	}

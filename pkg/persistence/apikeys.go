@@ -9,7 +9,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 )
 
 // CreateAPIKey creates a new user api key
@@ -67,7 +67,7 @@ func (pg *PGLayer) GetAPIKeyByID(ctx context.Context, id uuid.UUID) (*models.API
 func (pg *PGLayer) GetAPIKeysByGithubUser(ctx context.Context, githubUser string) ([]*models.APIKey, error) {
 	var out []*models.APIKey
 	q := `SELECT ` + models.APIKey{}.Columns() + ` FROM api_keys WHERE github_user = $1;`
-	rows, err := pg.db.QueryContext(ctx,q, githubUser)
+	rows, err := pg.db.QueryContext(ctx, q, githubUser)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

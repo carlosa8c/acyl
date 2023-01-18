@@ -26,7 +26,7 @@ func (ldb *LocalDB) MustRun() {
 	}
 	if os.Getenv("POSTGRES_ALREADY_RUNNING") == "" {
 		ldb.lf("starting postgres\n")
-		err := exec.Command("docker", "run", "-d", "--name", "postgres", "-p", "5432:5432", "-e", "POSTGRES_USER=acyl", "-e", "POSTGRES_PASSWORD=acyl", "postgres:9.6").Run()
+		err := exec.Command("docker", "run", "-d", "--name", "postgres", "-p", "5432:5432", "-e", "POSTGRES_USER=acyl", "-e", "POSTGRES_PASSWORD=acyl", "postgres:12-alpine").Run()
 		if err != nil {
 			fail("error encountered while starting postgres: %v\n", err)
 		}

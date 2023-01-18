@@ -6,11 +6,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	nitroerrors "github.com/dollarshaveclub/acyl/pkg/nitro/errors"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	nitroerrors "github.com/Pluto-tv/acyl/pkg/nitro/errors"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/pkg/errors"
 )
 
@@ -18,13 +18,15 @@ import (
 type BuildOptions struct {
 	// Relative path to Dockerfile within build context
 	DockerfilePath string
+	// Name of the Dockerfile to build from
+	DockerfileName string
 	// key-value pairs for optional build arguments
 	BuildArgs map[string]string
 }
 
 // BuilderBackend describes the object that actually does image builds
 type BuilderBackend interface {
-	BuildImage(ctx context.Context, envName, githubRepo, imageRepo, ref string, ops BuildOptions) error
+	BuildImage(ctx context.Context, envName, depName, githubRepo, imageRepo, ref string, ops BuildOptions) error
 }
 
 // Builder describes an object that builds a set of container images
@@ -105,7 +107,7 @@ func (b *ImageBuilder) StartBuilds(ctx context.Context, envname string, rc *mode
 	if b.BuildTimeout == time.Duration(0) {
 		b.BuildTimeout = DefaultBuildTimeout
 	}
-	buildimage := func(ctx context.Context, name, repo, image, ref, dockerfilepath string) {
+	buildimage := func(ctx context.Context, name, repo, image, ref, dockerfilepath, dockerfilename string) {
 		batch.outcomes.Lock()
 		batch.outcomes.started[buildid(envname, name)] = struct{}{}
 		batch.outcomes.Unlock()
@@ -113,7 +115,7 @@ func (b *ImageBuilder) StartBuilds(ctx context.Context, envname string, rc *mode
 		eventlogger.GetLogger(ctx).SetImageStarted(name)
 
 		end := b.MC.Timing("images.build", "repo:"+repo, "triggering_repo:"+rc.Application.Repo)
-		err := b.Backend.BuildImage(ctx, envname, repo, image, ref, BuildOptions{DockerfilePath: dockerfilepath})
+		err := b.Backend.BuildImage(ctx, envname, name, repo, image, ref, BuildOptions{DockerfilePath: dockerfilepath, DockerfileName: dockerfilename})
 		end(fmt.Sprintf("success:%v", err == nil))
 
 		eventlogger.GetLogger(ctx).SetImageCompleted(name, err != nil)
@@ -125,12 +127,12 @@ func (b *ImageBuilder) StartBuilds(ctx context.Context, envname string, rc *mode
 	cfs := []context.CancelFunc{}
 	ctx2, cf := context.WithTimeout(ctx, b.BuildTimeout)
 	cfs = append(cfs, cf)
-	go buildimage(ctx2, models.GetName(rc.Application.Repo), rc.Application.Repo, rc.Application.Image, rc.Application.Ref, rc.Application.DockerfilePath)
+	go buildimage(ctx2, models.GetName(rc.Application.Repo), rc.Application.Repo, rc.Application.Image, rc.Application.Ref, rc.Application.DockerfilePath, rc.Application.DockerfileName)
 	for _, d := range rc.Dependencies.All() {
 		if d.Repo != "" { // only build images for Repo (branch-matched) dependencies
 			ctx3, cf := context.WithTimeout(ctx, b.BuildTimeout)
 			cfs = append(cfs, cf)
-			go buildimage(ctx3, d.Name, d.Repo, d.AppMetadata.Image, d.AppMetadata.Ref, d.AppMetadata.DockerfilePath)
+			go buildimage(ctx3, d.Name, d.Repo, d.AppMetadata.Image, d.AppMetadata.Ref, d.AppMetadata.DockerfilePath, d.AppMetadata.DockerfileName)
 		}
 	}
 	stopf := func() {

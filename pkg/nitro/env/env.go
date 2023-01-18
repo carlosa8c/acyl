@@ -7,21 +7,21 @@ import (
 	"sort"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghapp"
+	"github.com/Pluto-tv/acyl/pkg/ghapp"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/locker"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/namegen"
-	ncontext "github.com/dollarshaveclub/acyl/pkg/nitro/context"
-	nitroerrors "github.com/dollarshaveclub/acyl/pkg/nitro/errors"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/meta"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metahelm"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/notifier"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	metahelmlib "github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/locker"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/namegen"
+	ncontext "github.com/Pluto-tv/acyl/pkg/nitro/context"
+	nitroerrors "github.com/Pluto-tv/acyl/pkg/nitro/errors"
+	"github.com/Pluto-tv/acyl/pkg/nitro/meta"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/nitro/notifier"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 	"github.com/google/uuid"
 	"github.com/imdario/mergo"
 	"github.com/pkg/errors"
@@ -666,7 +666,6 @@ func (m *Manager) delete(ctx context.Context, rd *models.RepoRevisionData, reaso
 
 // deleteNamespace deletes a namespace and cleans up the database
 func (m *Manager) deleteNamespace(ctx context.Context, k8senv *models.KubernetesEnvironment, repo string) {
-
 	// new context with independent timeout, but preserve the eventlogger from the original context
 	ctx, cf := context.WithTimeout(eventlogger.NewEventLoggerContext(context.Background(), eventlogger.GetLogger(ctx)), 10*time.Minute)
 	defer cf()

@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -17,18 +18,18 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 
-	mh "github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
@@ -207,7 +208,7 @@ func (api *uiapi) loadTemplate(name string) error {
 	var b []byte
 	// partials are parsed & available to every view
 	for k, v := range partials {
-		b, err = ioutil.ReadFile(path.Join(api.assetsPath, v))
+		b, err = os.ReadFile(path.Join(api.assetsPath, v))
 		if err != nil {
 			return errors.Wrap(err, "error reading partial")
 		}
@@ -220,8 +221,7 @@ func (api *uiapi) loadTemplate(name string) error {
 			return errors.Wrapf(err, "error parsing template: %v", v)
 		}
 	}
-
-	b, err = ioutil.ReadFile(path.Join(api.assetsPath, v))
+	b, err = os.ReadFile(path.Join(api.assetsPath, v))
 	if err != nil {
 		return errors.Wrap(err, "error reading asset template")
 	}
@@ -631,7 +631,7 @@ func (api *uiapi) getAndAuthorizeGitHubUser(ctx context.Context, code, state str
 	if resp.StatusCode != 200 {
 		return "", "", fmt.Errorf("validation response indicates error: %v", resp.StatusCode)
 	}
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", "", errors.Wrap(err, "error reading response body")
 	}
@@ -714,8 +714,9 @@ type envTmplData struct {
 }
 
 func repoInRepos(repos []string, repo string) bool {
+	sanitizedRepo := strings.ToLower(repo)
 	for _, r := range repos {
-		if r == repo {
+		if strings.ToLower(r) == sanitizedRepo {
 			return true
 		}
 	}
@@ -785,7 +786,7 @@ type failureReportTmplData struct {
 	BaseTemplateData
 	EnvName, EventID, PullRequestURL string
 	StartedTime, FailedTime          time.Time
-	FailedResources                  mh.ChartError
+	FailedResources                  metahelmlib.ChartError
 }
 
 func (api *uiapi) failureReportHandler(w http.ResponseWriter, r *http.Request) {

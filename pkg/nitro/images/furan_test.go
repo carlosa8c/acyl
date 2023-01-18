@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	"github.com/dollarshaveclub/furan/rpcclient"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	"github.com/Pluto-tv/furan/rpcclient"
 )
 
 func TestFuranImageBackendBuildImage(t *testing.T) {
@@ -46,7 +46,7 @@ func TestFuranImageBackendBuildImage(t *testing.T) {
 			el := &eventlogger.Logger{DL: dl}
 			el.Init([]byte{}, c.githubRepo, 99)
 			ctx := eventlogger.NewEventLoggerContext(context.Background(), el)
-			if err := fib.BuildImage(ctx, c.envName, c.githubRepo, c.imageRepo, c.ref, BuildOptions{}); err != nil {
+			if err := fib.BuildImage(ctx, c.envName, "foo-bar", c.githubRepo, c.imageRepo, c.ref, BuildOptions{}); err != nil {
 				if c.isError {
 					if !strings.Contains(err.Error(), c.errContains) {
 						t.Fatalf("error missing string (%v): %v", c.errContains, err)

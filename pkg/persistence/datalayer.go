@@ -5,8 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
+	guuid "github.com/gofrs/uuid"
 	"github.com/google/uuid"
 )
 
@@ -85,12 +86,13 @@ type EventLoggerDataLayer interface {
 	SetEventStatusTree(id uuid.UUID, tree map[string]models.EventStatusTreeNode) error
 	SetEventStatusCompleted(id uuid.UUID, configStatus models.EventStatus) error
 	SetEventStatusImageStarted(id uuid.UUID, name string) error
+	SetEventStatusImageBuildID(id uuid.UUID, name string, furanBuildID guuid.UUID) error
 	SetEventStatusImageCompleted(id uuid.UUID, name string, err bool) error
 	SetEventStatusChartStarted(id uuid.UUID, name string, status models.NodeChartStatus) error
 	SetEventStatusChartCompleted(id uuid.UUID, name string, status models.NodeChartStatus) error
 	GetEventStatus(id uuid.UUID) (*models.EventStatusSummary, error)
 	SetEventStatusRenderedStatus(id uuid.UUID, rstatus models.RenderedEventStatus) error
-	SetEventStatusFailed(id uuid.UUID, ce metahelm.ChartError) error
+	SetEventStatusFailed(id uuid.UUID, ce metahelmlib.ChartError) error
 }
 
 type UISessionsDataLayer interface {

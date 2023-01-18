@@ -205,7 +205,7 @@ func TestFinderRepoInfoLocalDisk(t *testing.T) {
 	if err != nil {
 		t.Fatalf("should have succeeded: %v", err)
 	}
-	if ri.GitHubRepoName != "dollarshaveclub/acyl" {
+	if ri.GitHubRepoName != "Pluto-tv/acyl" {
 		t.Fatalf("bad GH name: %v", ri.GitHubRepoName)
 	}
 	t.Logf("%+v", ri)

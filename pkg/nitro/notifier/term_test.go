@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 )
 
 func TestTerminalSend(t *testing.T) {

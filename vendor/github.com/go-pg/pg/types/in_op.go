@@ -1,38 +1,49 @@
 package types
 
 import (
-	"fmt"
 	"reflect"
 )
 
-type InOp struct {
-	slice  reflect.Value
-	append AppenderFunc
+type inOp struct {
+	slice reflect.Value
 }
 
-var _ ValueAppender = (*InOp)(nil)
+var _ ValueAppender = (*inOp)(nil)
 
-func In(slice interface{}) *InOp {
-	v := reflect.ValueOf(slice)
-	if !v.IsValid() {
-		panic(fmt.Errorf("pg.In(nil)"))
-	}
-	if v.Kind() != reflect.Slice {
-		panic(fmt.Errorf("pg.In(unsupported %s)", v.Type()))
-	}
-	return &InOp{
-		slice:  v,
-		append: Appender(v.Type().Elem()),
+func InMulti(values ...interface{}) ValueAppender {
+	return &inOp{
+		slice: reflect.ValueOf(values),
 	}
 }
 
-func (in *InOp) AppendValue(b []byte, quote int) ([]byte, error) {
-	for i := 0; i < in.slice.Len(); i++ {
-		b = in.append(b, in.slice.Index(i), quote)
-		b = append(b, ',')
+func InSlice(slice interface{}) ValueAppender {
+	return &inOp{
+		slice: reflect.ValueOf(slice),
 	}
-	if in.slice.Len() > 0 {
-		b = b[:len(b)-1]
+}
+
+func (in *inOp) AppendValue(b []byte, quote int) []byte {
+	return appendIn(b, in.slice, quote)
+}
+
+func appendIn(b []byte, slice reflect.Value, quote int) []byte {
+	for i := 0; i < slice.Len(); i++ {
+		if i > 0 {
+			b = append(b, ',')
+		}
+
+		elem := slice.Index(i)
+		if elem.Kind() == reflect.Interface {
+			elem = elem.Elem()
+		}
+
+		if elem.Kind() == reflect.Slice {
+			b = append(b, '(')
+			b = appendIn(b, elem, quote)
+			b = append(b, ')')
+		} else {
+			b = appendValue(b, elem, quote)
+		}
 	}
-	return b, nil
+	return b
 }

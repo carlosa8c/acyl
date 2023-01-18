@@ -12,19 +12,19 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/locker"
-	"github.com/dollarshaveclub/acyl/pkg/memfs"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/namegen"
-	nitroerrors "github.com/dollarshaveclub/acyl/pkg/nitro/errors"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/meta"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metahelm"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/notifier"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	metahelmlib "github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/locker"
+	"github.com/Pluto-tv/acyl/pkg/memfs"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/namegen"
+	nitroerrors "github.com/Pluto-tv/acyl/pkg/nitro/errors"
+	"github.com/Pluto-tv/acyl/pkg/nitro/meta"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/nitro/notifier"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -195,6 +195,55 @@ func TestGenerateNewEnv(t *testing.T) {
 	}
 }
 
+func TestGenerateNewEnvCapitalizedRepo(t *testing.T) {
+	fg := &meta.FakeGetter{
+		GetFunc: func(ctx context.Context, rd models.RepoRevisionData) (*models.RepoConfig, error) {
+			return &models.RepoConfig{
+				Application: models.RepoConfigAppMetadata{
+					Repo:   "foo/bar",
+					Ref:    "asdf",
+					Branch: "foo",
+				},
+			}, nil
+		},
+	}
+	frc := &ghclient.FakeRepoClient{
+		GetBranchesFunc: func(context.Context, string) ([]ghclient.BranchInfo, error) {
+			return []ghclient.BranchInfo{ghclient.BranchInfo{Name: "master"}}, nil
+		},
+	}
+	dl := persistence.NewFakeDataLayer()
+	m := Manager{MG: fg, RC: frc, NG: &namegen.FakeNameGenerator{}, DL: dl}
+	env, err := m.generateNewEnv(context.Background(), &models.RepoRevisionData{Repo: "Foo/bar", User: "foo", PullRequest: 1, BaseBranch: "master", SourceSHA: "asdf", SourceBranch: "foo"})
+	if err != nil {
+		t.Fatalf("should have succeeded: %v", err)
+	}
+	if env.Repo == "foo/bar" {
+		t.Fatalf("bad repo: %v", env.Repo)
+	}
+	if env.User != "foo" {
+		t.Fatalf("bad user: %v", env.User)
+	}
+	if env.PullRequest != 1 {
+		t.Fatalf("bad PR: %v", env.PullRequest)
+	}
+	if env.Status != models.Spawned {
+		t.Fatalf("bad status: %v", env.Status)
+	}
+	oldname := env.Name
+	// test reuse of an existing environment record
+	env, err = m.generateNewEnv(context.Background(), &models.RepoRevisionData{Repo: "foo/bar", User: "foo", PullRequest: 1, BaseBranch: "master", SourceSHA: "1234", SourceBranch: "foo"})
+	if err != nil {
+		t.Fatalf("reuse should have succeeded: %v", err)
+	}
+	if env.Name != oldname {
+		t.Fatalf("expected reuse of previous name: %v (vs %v)", env.Name, oldname)
+	}
+	if env.SourceSHA != "1234" {
+		t.Fatalf("bad sha: %v", env.SourceSHA)
+	}
+}
+
 func TestFetchCharts(t *testing.T) {
 	fg := &meta.FakeGetter{
 		GetFunc: func(ctx context.Context, rd models.RepoRevisionData) (*models.RepoConfig, error) {
@@ -234,6 +283,25 @@ func TestGetEnv(t *testing.T) {
 		MC: &metrics.FakeCollector{},
 	}
 	qa, err := m.getenv(context.Background(), &models.RepoRevisionData{Repo: "foo/bar", PullRequest: 99})
+	if err != nil {
+		t.Fatalf("should have succeeded: %v", err)
+	}
+	if qa == nil {
+		t.Fatalf("expected results")
+	}
+	if qa.Name != "foo-bar" {
+		t.Fatalf("bad env name: %v", qa.Name)
+	}
+}
+
+func TestGetEnvCapitalizedRepo(t *testing.T) {
+	dl := persistence.NewFakeDataLayer()
+	dl.CreateQAEnvironment(context.Background(), &models.QAEnvironment{Name: "foo-bar", Repo: "Foo/bar", PullRequest: 99, Status: models.Success})
+	m := Manager{
+		DL: dl,
+		MC: &metrics.FakeCollector{},
+	}
+	qa, err := m.getenv(context.Background(), &models.RepoRevisionData{Repo: "Foo/bar", PullRequest: 99})
 	if err != nil {
 		t.Fatalf("should have succeeded: %v", err)
 	}

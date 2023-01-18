@@ -1,6 +1,10 @@
 package orm
 
-import "github.com/go-pg/pg/types"
+import (
+	"fmt"
+
+	"github.com/go-pg/pg/types"
+)
 
 const (
 	HasOneRelation = 1 << iota
@@ -11,13 +15,18 @@ const (
 
 type Relation struct {
 	Type        int
-	Polymorphic bool
 	Field       *Field
 	JoinTable   *Table
 	FKs         []*Field
+	Polymorphic *Field
+	FKValues    []*Field
 
 	M2MTableName  types.Q
 	M2MTableAlias types.Q
-	BasePrefix    string
-	JoinPrefix    string
+	BaseFKs       []string
+	JoinFKs       []string
+}
+
+func (r *Relation) String() string {
+	return fmt.Sprintf("relation=%s", r.Field.GoName)
 }

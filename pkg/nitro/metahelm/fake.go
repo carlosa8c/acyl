@@ -6,14 +6,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -31,8 +31,8 @@ type FakeInstaller struct {
 
 var _ Installer = &FakeInstaller{}
 
-func getReleases(cl ChartLocations) metahelm.ReleaseMap {
-	releases := metahelm.ReleaseMap{} // chart title to release name
+func getReleases(cl ChartLocations) metahelmlib.ReleaseMap {
+	releases := metahelmlib.ReleaseMap{} // chart title to release name
 	for k := range cl {
 		releases[k] = k
 	}
@@ -167,7 +167,7 @@ func stubPodData(ns string) *v1.PodList {
 	pod2NotReadyContainerStatus := v1.ContainerStatus{
 		Name:         "bar-app-not-ready",
 		RestartCount: 4,
-		Ready: false,
+		Ready:        false,
 	}
 	pod2 := v1.Pod{
 		Status: v1.PodStatus{
@@ -221,7 +221,7 @@ func (fkr FakeKubernetesReporter) GetPodContainers(ctx context.Context, ns, podn
 }
 
 func (fkr FakeKubernetesReporter) GetPodLogs(ctx context.Context, ns, podname, container string, lines uint) (out io.ReadCloser, err error) {
-	rc := ioutil.NopCloser(strings.NewReader(""))
+	rc := io.NopCloser(strings.NewReader(""))
 	body, err := getFakePodLogs(fkr.FakePodLogFilePath, lines)
 	if err != nil {
 		return rc, fmt.Errorf("error getting logs: %w", err)
@@ -230,7 +230,7 @@ func (fkr FakeKubernetesReporter) GetPodLogs(ctx context.Context, ns, podname, c
 	if uint(lineCount) > lines {
 		return rc, errors.Errorf("error lines returned exceeded expected %v, actual %v", lines, lineCount)
 	}
-	plRC := ioutil.NopCloser(bytes.NewReader(body))
+	plRC := io.NopCloser(bytes.NewReader(body))
 	return plRC, nil
 }
 
@@ -238,7 +238,7 @@ func getFakePodLogs(path string, lines uint) ([]byte, error) {
 	var bucket []string
 	var logs []string
 	var requestedLogs []byte
-	podlogs, err := ioutil.ReadFile(path)
+	podlogs, err := os.ReadFile(path)
 	if err != nil {
 		return []byte{}, fmt.Errorf("error reading pod log test data file: %w", err)
 	}

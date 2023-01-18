@@ -13,9 +13,9 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/pkg/errors"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 )
 
 type middleware func(http.HandlerFunc) http.HandlerFunc

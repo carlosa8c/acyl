@@ -6,6 +6,17 @@ import (
 	"github.com/go-pg/pg/types"
 )
 
+func indirect(v reflect.Value) reflect.Value {
+	switch v.Kind() {
+	case reflect.Interface:
+		return indirect(v.Elem())
+	case reflect.Ptr:
+		return v.Elem()
+	default:
+		return v
+	}
+}
+
 func indirectType(t reflect.Type) reflect.Type {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -16,7 +27,7 @@ func indirectType(t reflect.Type) reflect.Type {
 func sliceElemType(v reflect.Value) reflect.Type {
 	elemType := v.Type().Elem()
 	if elemType.Kind() == reflect.Interface && v.Len() > 0 {
-		return reflect.Indirect(v.Index(0).Elem()).Type()
+		return indirect(v.Index(0).Elem()).Type()
 	} else {
 		return indirectType(elemType)
 	}
@@ -55,21 +66,6 @@ func indirectNew(v reflect.Value) reflect.Value {
 	return v
 }
 
-func columns(b []byte, table types.Q, prefix string, fields []*Field) []byte {
-	for i, f := range fields {
-		if i > 0 {
-			b = append(b, ", "...)
-		}
-
-		if len(table) > 0 {
-			b = append(b, table...)
-			b = append(b, '.')
-		}
-		b = types.AppendField(b, prefix+f.SQLName, 1)
-	}
-	return b
-}
-
 func walk(v reflect.Value, index []int, fn func(reflect.Value)) {
 	v = reflect.Indirect(v)
 	switch v.Kind() {
@@ -86,39 +82,16 @@ func visitField(v reflect.Value, index []int, fn func(reflect.Value)) {
 	v = reflect.Indirect(v)
 	if len(index) > 0 {
 		v = v.Field(index[0])
+		if v.Kind() == reflect.Ptr && v.IsNil() {
+			return
+		}
 		walk(v, index[1:], fn)
 	} else {
 		fn(v)
 	}
 }
 
-func appendChildValues(b []byte, v reflect.Value, index []int, fields []*Field) []byte {
-	seen := make(map[string]struct{})
-	walk(v, index, func(v reflect.Value) {
-		start := len(b)
-
-		b = append(b, '(')
-		for i, f := range fields {
-			if i > 0 {
-				b = append(b, ", "...)
-			}
-			b = f.AppendValue(b, v, 1)
-		}
-		b = append(b, "), "...)
-
-		if _, ok := seen[string(b[start:])]; ok {
-			b = b[:start]
-		} else {
-			seen[string(b[start:])] = struct{}{}
-		}
-	})
-	if len(seen) > 0 {
-		b = b[:len(b)-2] // trim ", "
-	}
-	return b
-}
-
-func dstValues(model tableModel, fields []*Field) map[string][]reflect.Value {
+func dstValues(model TableModel, fields []*Field) map[string][]reflect.Value {
 	mp := make(map[string][]reflect.Value)
 	var id []byte
 	walk(model.Root(), model.ParentIndex(), func(v reflect.Value) {
@@ -129,27 +102,26 @@ func dstValues(model tableModel, fields []*Field) map[string][]reflect.Value {
 }
 
 func modelId(b []byte, v reflect.Value, fields []*Field) []byte {
-	for _, f := range fields {
+	for i, f := range fields {
+		if i > 0 {
+			b = append(b, ',')
+		}
 		b = f.AppendValue(b, v, 0)
-		b = append(b, ',')
 	}
 	return b
 }
 
-func modelIdMap(b []byte, m map[string]string, prefix string, fields []*Field) []byte {
-	for _, f := range fields {
-		b = append(b, m[prefix+f.SQLName]...)
-		b = append(b, ',')
-	}
-	return b
-}
-
-func appendColumns(b []byte, fields []*Field) []byte {
+func appendColumns(b []byte, table types.Q, fields []*Field) []byte {
 	for i, f := range fields {
 		if i > 0 {
 			b = append(b, ", "...)
 		}
-		b = append(b, f.Column...)
+
+		if len(table) > 0 {
+			b = append(b, table...)
+			b = append(b, '.')
+		}
+		b = types.AppendField(b, f.SQLName, 1)
 	}
 	return b
 }

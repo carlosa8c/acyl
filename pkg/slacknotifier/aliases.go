@@ -1,8 +1,8 @@
 package slacknotifier
 
 import (
-  "github.com/dollarshaveclub/acyl/pkg/models"
-  "github.com/dollarshaveclub/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
 )
 
 type RepoRevisionData = models.RepoRevisionData
@@ -13,5 +13,5 @@ type BranchInfo = ghclient.BranchInfo
 type CommitStatus = ghclient.CommitStatus
 
 const (
-  DestroyApiRequest = models.DestroyApiRequest
+	DestroyApiRequest = models.DestroyApiRequest
 )

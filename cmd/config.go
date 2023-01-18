@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -20,26 +19,25 @@ import (
 	"helm.sh/helm/v3/pkg/lint/support"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 
 	"github.com/rivo/tview"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
 
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/nitro/meta"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	metahelmdag "github.com/Pluto-tv/metahelm/pkg/dag"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 	"github.com/alecthomas/chroma/quick"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/meta"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metahelm"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/metahelm/pkg/dag"
-	metahelmlib "github.com/dollarshaveclub/metahelm/pkg/metahelm"
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/spf13/afero"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
@@ -111,14 +109,8 @@ func init() {
 	// test (create/update/delete)
 	// (see test.go)
 
-	// shared flags
-	hd, err := homedir.Dir()
-	if err != nil {
-		log.Printf("error getting home directory: %v", err)
-		hd = ""
-	}
 	configCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")
-	configCmd.PersistentFlags().StringSliceVar(&repoSearchPaths, "search-paths", []string{filepath.Join(hd, "code")}, "comma-separated list of paths to search for git repositories")
+	configCmd.PersistentFlags().StringSliceVar(&repoSearchPaths, "search-paths", []string{"."}, "comma-separated list of paths to search for git repositories")
 	configCmd.PersistentFlags().StringSliceVar(&workingTreeRepos, "working-tree-repos", []string{}, "comma-separated list of repo names to use the working tree instead of commits, if present locally")
 	configCmd.PersistentFlags().BoolVar(&triggeringRepoUsesWorkingTree, "triggering-repo-working-tree", true, "Triggering repo always uses working tree instead of commits")
 	configCmd.PersistentFlags().StringVar(&githubHostname, "github-hostname", "github.com", "GitHub hostname in git repo SSH remotes")
@@ -134,14 +126,13 @@ func init() {
 func generateLocalMetaGetter(dl persistence.DataLayer, scb ghclient.StatusCallback) (*meta.DataGetter, ghclient.LocalRepoInfo, string, context.Context) {
 	var lf func(string, ...interface{})
 	var elsink io.Writer
-	logw, stdlogw := ioutil.Discard, ioutil.Discard
+	logw := io.Discard
 	if verbose {
 		lf = log.Printf
 		elsink = os.Stdout
 		logw = os.Stdout
-		stdlogw = os.Stderr
 	}
-	log.SetOutput(stdlogw)
+	log.SetOutput(os.Stderr)
 	if os.Getenv("GITHUB_TOKEN") == "" {
 		log.Fatalf("GITHUB_TOKEN is empty: make sure you have that environment variable set with a valid token")
 	}
@@ -236,7 +227,7 @@ func configCheck(cmd *cobra.Command, args []string) {
 		perr("error processing config: %v", err)
 		return
 	}
-	tempd, err := ioutil.TempDir("", "acyl-config-check")
+	tempd, err := os.MkdirTemp("", "acyl-config-check")
 	if err != nil {
 		perr("error creating temp file: %v", err)
 		return
@@ -292,7 +283,7 @@ const (
 )
 
 func displayInfoTerminal(rc *models.RepoConfig, err error, mg meta.Getter) int {
-	ctx := eventlogger.NewEventLoggerContext(context.Background(), &eventlogger.Logger{Sink: ioutil.Discard})
+	ctx := eventlogger.NewEventLoggerContext(context.Background(), &eventlogger.Logger{Sink: io.Discard})
 	app := tview.NewApplication()
 	errorModalText := func(msg, help string, err error) string {
 		return "[red::b]" + msg + "\n\n[white::-]" + tview.Escape(err.Error()) + "\n\n[yellow::b]" + help
@@ -437,7 +428,7 @@ func displayInfoTerminal(rc *models.RepoConfig, err error, mg meta.Getter) int {
 		vos := make(map[string]interface{})
 		yaml.Unmarshal(mc.ValueOverrides, &vos) // if error, empty value overrides
 
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 		l := action.NewLint()
 		l.Strict = true
 		l.Namespace = "nitro-12345-some-name"
@@ -456,13 +447,13 @@ func displayInfoTerminal(rc *models.RepoConfig, err error, mg meta.Getter) int {
 		}
 	})
 
-	getDAGOG := func() (dag.ObjectGraph, error) {
-		objs := []dag.GraphObject{}
+	getDAGOG := func() (metahelmdag.ObjectGraph, error) {
+		objs := []metahelmdag.GraphObject{}
 		for k := range mcharts {
 			v := mcharts[k]
 			objs = append(objs, &v)
 		}
-		og := dag.ObjectGraph{}
+		og := metahelmdag.ObjectGraph{}
 		return og, og.Build(objs)
 	}
 
@@ -477,7 +468,7 @@ func displayInfoTerminal(rc *models.RepoConfig, err error, mg meta.Getter) int {
 			errorModal("Error Generating Graph", "Check dependency configuration.", err)
 			return
 		}
-		f, err := ioutil.TempFile("", "acyl-metahelm-dag")
+		f, err := os.CreateTemp("", "acyl-metahelm-dag")
 		if err != nil {
 			errorModal("Error Creating Temp File", "Check your disk.", err)
 			return
@@ -764,7 +755,7 @@ func displayInfoTerminal(rc *models.RepoConfig, err error, mg meta.Getter) int {
 	pages.AddPage("main", grid, true, true)
 	pages.AddPage("modal", chartmodalgrid, false, true) // must add after main so main is visible behind it
 
-	tempd, err := ioutil.TempDir("", "acyl-config")
+	tempd, err := os.MkdirTemp("", "acyl-config")
 	if err != nil {
 		log.Printf("error creating temp dir: %v", err)
 		return 1

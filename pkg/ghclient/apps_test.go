@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/config"
 )
 
 func TestGetInstallationTokenForRepo(t *testing.T) {
@@ -45,7 +45,7 @@ func TestGetInstallationTokenForRepo(t *testing.T) {
 
 	t.Logf("appid: %v; instid: %v\n", appid, instid)
 
-	_, err = ic.GetInstallationTokenForRepo(context.Background(), int64(iid), "dollarshaveclub/acyl")
+	_, err = ic.GetInstallationTokenForRepo(context.Background(), int64(iid), "Pluto-tv/acyl")
 	if err != nil {
 		t.Fatalf("error getting token: %v", err)
 	}

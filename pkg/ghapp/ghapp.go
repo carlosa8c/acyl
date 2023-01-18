@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/palantir/go-githubapp/githubapp"
 	"github.com/pkg/errors"
 )

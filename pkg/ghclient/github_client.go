@@ -3,18 +3,17 @@ package ghclient
 import (
 	"context"
 	"fmt"
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
 	"golang.org/x/time/rate"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghapp"
+	"github.com/Pluto-tv/acyl/pkg/ghapp"
 
-	"github.com/google/go-github/v38/github"
+	"github.com/google/go-github/v52/github"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 )
@@ -174,7 +173,7 @@ func (ghc *GitHubClient) GetTags(ctx context.Context, repo string) ([]BranchInfo
 }
 
 // SetStatus creates or updates a status on repo at commit sha
-// Note that the github client CreateStatus function will bail if the context was canceled. It is often recommended to pass a fresh context to this function.
+//  Note that the github client CreateStatus function will bail if the context was canceled. It is often recommended to pass a fresh context to this function.
 func (ghc *GitHubClient) SetStatus(ctx context.Context, repo string, sha string, status *CommitStatus) error {
 	rs := strings.Split(repo, "/")
 	if len(rs) != 2 {
@@ -274,7 +273,7 @@ func (ghc *GitHubClient) GetFileContents(ctx context.Context, repo string, path 
 			return nil, errors.Wrap(err, "error downloading file")
 		}
 		defer rc.Close()
-		c, err := ioutil.ReadAll(rc)
+		c, err := io.ReadAll(rc)
 		if err != nil {
 			return nil, errors.Wrap(err, "error reading file contents")
 		}
@@ -346,7 +345,7 @@ func (ghc *GitHubClient) GetDirectoryContents(ctx context.Context, repo, path, r
 					continue
 				}
 				defer cts.Close()
-				c, err = ioutil.ReadAll(cts)
+				c, err = io.ReadAll(cts)
 				if err != nil {
 					err = errors.Wrapf(err, "error reading HTTP body for file: %v", fc.GetPath())
 					continue
@@ -431,7 +430,7 @@ func (ghc *GitHubClient) GetRepoArchive(ctx context.Context, repo, ref string) (
 	if err != nil {
 		return "", fmt.Errorf("error creating http request: %v", err)
 	}
-	f, err := ioutil.TempFile("", "github-getrepoarchive-*.tar.gz")
+	f, err := os.CreateTemp("", "github-getrepoarchive-*.tar.gz")
 	if err != nil {
 		return "", fmt.Errorf("error creating temp file: %w", err)
 	}

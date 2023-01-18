@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/palantir/go-githubapp/githubapp"
 	"golang.org/x/sync/errgroup"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -15,7 +14,7 @@ import (
 )
 
 const (
-	testingRepo = "dollarshaveclub/acyl"
+	testingRepo = "Pluto-tv/acyl"
 	testingPath = ".helm/charts"
 	testingRef  = "master"
 )
@@ -66,7 +65,7 @@ func TestGetDirectoryContentsGithubApp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("invalid installation id: %v", err)
 	}
-	privateKeyPEM, err := ioutil.ReadFile(pkeyPEMPath)
+	privateKeyPEM, err := os.ReadFile(pkeyPEMPath)
 	if err != nil {
 		t.Fatalf("error reading pem key: %v", err)
 	}

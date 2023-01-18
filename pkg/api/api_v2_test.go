@@ -6,7 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -14,17 +14,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metahelm"
-	"github.com/dollarshaveclub/acyl/pkg/spawner"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/spawner"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/lib/pq"
 	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/testhelper/testdatalayer"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/testhelper/testdatalayer"
 )
 
 func TestAPIv2SearchByTrackingRef(t *testing.T) {
@@ -35,7 +35,7 @@ func TestAPIv2SearchByTrackingRef(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestAPIv2SearchByTrackingRef(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -71,6 +71,50 @@ func TestAPIv2SearchByTrackingRef(t *testing.T) {
 	}
 }
 
+func TestAPIv2SearchCapitalizedRepoByTrackingRef(t *testing.T) {
+	dl, tdl := testdatalayer.New(testlogger, t)
+	if err := tdl.Setup(testDataPath); err != nil {
+		t.Fatalf("error setting up test database: %v", err)
+	}
+	defer tdl.TearDown()
+
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	if err != nil {
+		t.Fatalf("error creating api: %v", err)
+	}
+	authMiddleware.apiKeys = sc.APIKeys
+
+	r := muxtrace.NewRouter()
+	apiv2.register(r)
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+	req, _ := http.NewRequest("GET", ts.URL+"/v2/envs/_search?repo=Dollarshaveclub%2Ffoo-fuzz&tracking_ref=master", nil)
+	req.Header.Set(apiKeyHeader, sc.APIKeys[0])
+	hc := &http.Client{}
+	resp, err := hc.Do(req)
+	if err != nil {
+		t.Fatalf("error executing request: %v", err)
+	}
+	bb, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("should have succeeded: %v: %v", resp.StatusCode, bb)
+	}
+	res := []v2QAEnvironment{}
+	err = json.Unmarshal(bb, &res)
+	if err != nil {
+		t.Fatalf("error unmarshaling results: %v", err)
+	}
+	if len(res) != 1 {
+		t.Fatalf("unexpected results length: %v", len(res))
+	}
+	if res[0].Name != "foo-fuzz" {
+		t.Fatalf("bad qa name: %v", res[0].Name)
+	}
+}
+
 func TestAPIv2SearchByTrackingRefUserAPIKey(t *testing.T) {
 	dl, tdl := testdatalayer.New(testlogger, t)
 	if err := tdl.Setup(testDataPath); err != nil {
@@ -79,7 +123,7 @@ func TestAPIv2SearchByTrackingRefUserAPIKey(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -102,7 +146,7 @@ func TestAPIv2SearchByTrackingRefUserAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -129,7 +173,7 @@ func TestAPIv2SearchByTrackingRefUserAPIKeyEmpty(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -151,7 +195,7 @@ func TestAPIv2SearchByTrackingRefUserAPIKeyEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -175,7 +219,7 @@ func TestAPIv2EnvDetails(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -193,7 +237,7 @@ func TestAPIv2EnvDetails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -217,7 +261,7 @@ func TestAPIv2EnvDetailsUserAPIKey(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -239,7 +283,7 @@ func TestAPIv2EnvDetailsUserAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -263,7 +307,7 @@ func TestAPIv2EnvDetailsUserAPIKeyForbidden(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -285,7 +329,7 @@ func TestAPIv2EnvDetailsUserAPIKeyForbidden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusForbidden {
@@ -301,7 +345,7 @@ func TestAPIv2EnvDetailsUserAPIKeyUnauthorized(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -323,7 +367,7 @@ func TestAPIv2EnvDetailsUserAPIKeyUnauthorized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -338,7 +382,7 @@ func TestAPIv2HealthCheck(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -359,7 +403,7 @@ func TestAPIv2HealthCheck(t *testing.T) {
 		t.Fatalf("error executing request: %v", err)
 	}
 
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -383,7 +427,7 @@ func TestAPIv2EventLog(t *testing.T) {
 	defer tdl.TearDown()
 
 	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
-	apiv2, err := newV2API(dl, nil, nil, sc, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, sc, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -423,7 +467,7 @@ func TestAPIv2EventLog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request 3: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -446,7 +490,7 @@ func TestAPIv2EventStatus(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, OAuthConfig{}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, OAuthConfig{}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -464,7 +508,7 @@ func TestAPIv2EventStatus(t *testing.T) {
 		t.Fatalf("error executing request 3: %v", err)
 	}
 
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -518,7 +562,7 @@ func TestAPIv2UserEnvs(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, OAuthConfig{Enforce: true}, testlogger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, OAuthConfig{Enforce: true}, testlogger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -575,7 +619,7 @@ func TestAPIv2UserEnvDetail(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, nil)
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -648,7 +692,7 @@ func TestAPIv2UserEnvActionsRebuild(t *testing.T) {
 	uf := func(ctx context.Context, rd models.RepoRevisionData) (string, error) {
 		return "updated environment", nil
 	}
-	apiv2, err := newV2API(dl, nil, &spawner.FakeEnvironmentSpawner{UpdateFunc: uf}, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, nil)
+	apiv2, err := newV2API(dl, nil, &spawner.FakeEnvironmentSpawner{UpdateFunc: uf}, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, nil)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -704,7 +748,7 @@ func TestAPIv2UserEnvNamePods(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -775,7 +819,7 @@ func TestAPIv2UserEnvNamePodContainers(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -857,7 +901,7 @@ func TestAPIv2UserEnvNamePodLogs(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{FakePodLogFilePath: "../nitro/metahelm/testdata/pod_logs.log"})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{FakePodLogFilePath: "../nitro/metahelm/testdata/pod_logs.log"})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -940,7 +984,7 @@ func TestAPIv2UserTokenCreate(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -1017,7 +1061,7 @@ func TestAPIv2UserTokenCreateAdminDenied(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -1067,7 +1111,7 @@ func TestAPIv2UserTokenCreateLimit(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -1189,7 +1233,7 @@ func TestAPIv2UserTokens(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
@@ -1299,7 +1343,7 @@ func TestAPIv2UserTokenDestroy(t *testing.T) {
 		},
 	}
 	copy(oauthcfg.UserTokenEncKey[:], []byte("00000000000000000000000000000000"))
-	apiv2, err := newV2API(dl, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
+	apiv2, err := newV2API(dl, nil, nil, nil, config.ServerConfig{APIKeys: []string{"foo"}}, oauthcfg, logger, metahelm.FakeKubernetesReporter{})
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}

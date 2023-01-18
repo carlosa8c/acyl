@@ -11,14 +11,14 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/match"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/images"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/match"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/nitro/images"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 	"github.com/pkg/errors"
 	"gopkg.in/src-d/go-billy.v4/memfs"
 	"gopkg.in/yaml.v2"
@@ -41,8 +41,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func chartMap(charts []metahelm.Chart) map[string]metahelm.Chart {
-	out := map[string]metahelm.Chart{}
+func chartMap(charts []metahelmlib.Chart) map[string]metahelmlib.Chart {
+	out := map[string]metahelmlib.Chart{}
 	for _, c := range charts {
 		out[c.Title] = c
 	}
@@ -112,9 +112,9 @@ func (tkc *testKubeClient) ToRawKubeConfigLoader() clientcmd.ClientConfig {
 func fakeHelmConfiguration(t *testing.T) *action.Configuration {
 	t.Helper()
 	ac := &action.Configuration{
-		Releases:       storage.Init(driver.NewMemory()),
-		KubeClient:     &testKubeClient{},
-		Capabilities:   chartutil.DefaultCapabilities,
+		Releases:     storage.Init(driver.NewMemory()),
+		KubeClient:   &testKubeClient{},
+		Capabilities: chartutil.DefaultCapabilities,
 		Log: func(format string, v ...interface{}) {
 			t.Helper()
 			t.Logf(format, v)
@@ -124,7 +124,7 @@ func fakeHelmConfiguration(t *testing.T) *action.Configuration {
 }
 
 // generate mock k8s objects for the supplied charts
-func gentestobjs(charts []metahelm.Chart, namespace string) []runtime.Object {
+func gentestobjs(charts []metahelmlib.Chart, namespace string) []runtime.Object {
 	if overrideNamespace != "" {
 		namespace = overrideNamespace
 	}
@@ -168,7 +168,7 @@ func TestMetahelmGenerateCharts(t *testing.T) {
 		inputCL                     ChartLocations
 		isError, disableDefaults    bool
 		errContains                 string
-		verifyf                     func([]metahelm.Chart) error
+		verifyf                     func([]metahelmlib.Chart) error
 	}{
 		{
 			name:         "Valid",
@@ -215,7 +215,7 @@ func TestMetahelmGenerateCharts(t *testing.T) {
 				"bar-baz": ChartLocation{ChartPath: "testdata/chart"},
 				"car-buz": ChartLocation{ChartPath: "testdata/chart"},
 			},
-			verifyf: func(charts []metahelm.Chart) error {
+			verifyf: func(charts []metahelmlib.Chart) error {
 				if len(charts) != 3 {
 					return fmt.Errorf("bad chart length: %v", len(charts))
 				}
@@ -570,9 +570,9 @@ func TestMetahelmCreateNamespace(t *testing.T) {
 }
 
 func TestMetahelmInstallCharts(t *testing.T) {
-	charts := []metahelm.Chart{
-		metahelm.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar"}},
-		metahelm.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
+	charts := []metahelmlib.Chart{
+		metahelmlib.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar"}},
+		metahelmlib.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
 	}
 	ns := "nitro-foo"
 	tobjs := gentestobjs(charts, ns)
@@ -619,17 +619,17 @@ func TestMetahelmInstallCharts(t *testing.T) {
 		dl: dl,
 		ib: ib,
 		mc: &metrics.FakeCollector{},
-		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelm.Manager, error) {
-			return &metahelm.Manager{
-				K8c: fkc,
+		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelmlib.Manager, error) {
+			return &metahelmlib.Manager{
+				K8c:  fkc,
 				HCfg: hcfg,
-				LogF: metahelm.LogFunc(func(msg string, args ...interface{}) {
+				LogF: metahelmlib.LogFunc(func(msg string, args ...interface{}) {
 					eventlogger.GetLogger(context.Background()).Printf("metahelm-test: "+msg, args...)
 				}),
 			}, nil
 		},
 	}
-	metahelm.ChartWaitPollInterval = 10 * time.Millisecond
+	metahelmlib.ChartWaitPollInterval = 10 * time.Millisecond
 	el := &eventlogger.Logger{DL: dl}
 	el.Init([]byte{}, rc.Application.Repo, 99)
 	ctx := eventlogger.NewEventLoggerContext(context.Background(), el)
@@ -639,9 +639,9 @@ func TestMetahelmInstallCharts(t *testing.T) {
 }
 
 func TestMetahelmInstallAndUpgradeChartsBuildError(t *testing.T) {
-	charts := []metahelm.Chart{
-		metahelm.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar"}},
-		metahelm.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
+	charts := []metahelmlib.Chart{
+		metahelmlib.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar"}},
+		metahelmlib.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
 	}
 	ns := "nitro-foo"
 	tobjs := gentestobjs(charts, ns)
@@ -689,21 +689,21 @@ func TestMetahelmInstallAndUpgradeChartsBuildError(t *testing.T) {
 	dl.CreateQAEnvironment(context.Background(), nenv.Env)
 	hcfg := fakeHelmConfiguration(t)
 	ci := ChartInstaller{
-		kc:  fkc,
-		dl:  dl,
-		ib:  ib,
-		mc:  &metrics.FakeCollector{},
-		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelm.Manager, error) {
-			return &metahelm.Manager{
-				K8c: fkc,
+		kc: fkc,
+		dl: dl,
+		ib: ib,
+		mc: &metrics.FakeCollector{},
+		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelmlib.Manager, error) {
+			return &metahelmlib.Manager{
+				K8c:  fkc,
 				HCfg: hcfg,
-				LogF: metahelm.LogFunc(func(msg string, args ...interface{}) {
+				LogF: metahelmlib.LogFunc(func(msg string, args ...interface{}) {
 					eventlogger.GetLogger(context.Background()).Printf("metahelm-test: "+msg, args...)
 				}),
 			}, nil
 		},
 	}
-	metahelm.ChartWaitPollInterval = 10 * time.Millisecond
+	metahelmlib.ChartWaitPollInterval = 10 * time.Millisecond
 	err = ci.installOrUpgradeCharts(context.Background(), ns, charts, nenv, b, false)
 	if err == nil {
 		t.Fatalf("install should have failed")
@@ -718,21 +718,21 @@ func TestMetahelmInstallAndUpgradeChartsBuildError(t *testing.T) {
 	defer b2.Stop()
 	nenv.Releases = map[string]string{"foo": "foo", "bar": "bar"}
 	ci = ChartInstaller{
-		kc:  fkc,
-		dl:  dl,
-		ib:  ib,
-		mc:  &metrics.FakeCollector{},
-		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelm.Manager, error) {
-			return &metahelm.Manager{
-				K8c: fkc,
+		kc: fkc,
+		dl: dl,
+		ib: ib,
+		mc: &metrics.FakeCollector{},
+		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelmlib.Manager, error) {
+			return &metahelmlib.Manager{
+				K8c:  fkc,
 				HCfg: hcfg,
-				LogF: metahelm.LogFunc(func(msg string, args ...interface{}) {
+				LogF: metahelmlib.LogFunc(func(msg string, args ...interface{}) {
 					eventlogger.GetLogger(context.Background()).Printf("metahelm-test: "+msg, args...)
 				}),
 			}, nil
 		},
 	}
-	metahelm.ChartWaitPollInterval = 10 * time.Millisecond
+	metahelmlib.ChartWaitPollInterval = 10 * time.Millisecond
 	err = ci.installOrUpgradeCharts(context.Background(), ns, charts, nenv, b2, true)
 	if err == nil {
 		t.Fatalf("upgrade should have failed")
@@ -953,9 +953,9 @@ func TestMetahelmBuildAndInstallCharts(t *testing.T) {
 		"foo": ChartLocation{ChartPath: "testdata/chart"},
 		"bar": ChartLocation{ChartPath: "testdata/chart"},
 	}
-	charts := []metahelm.Chart{
-		metahelm.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar"}},
-		metahelm.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
+	charts := []metahelmlib.Chart{
+		metahelmlib.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar"}},
+		metahelmlib.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
 	}
 	ns := "nitro-foo"
 	tobjs := gentestobjs(charts, ns)
@@ -993,21 +993,21 @@ func TestMetahelmBuildAndInstallCharts(t *testing.T) {
 	dl.CreateQAEnvironment(context.Background(), nenv.Env)
 	hcfg := fakeHelmConfiguration(t)
 	ci := ChartInstaller{
-		kc:  fkc,
-		dl:  dl,
-		ib:  ib,
-		mc:  &metrics.FakeCollector{},
-		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelm.Manager, error) {
-			return &metahelm.Manager{
-				K8c: fkc,
+		kc: fkc,
+		dl: dl,
+		ib: ib,
+		mc: &metrics.FakeCollector{},
+		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelmlib.Manager, error) {
+			return &metahelmlib.Manager{
+				K8c:  fkc,
 				HCfg: hcfg,
-				LogF: metahelm.LogFunc(func(msg string, args ...interface{}) {
+				LogF: metahelmlib.LogFunc(func(msg string, args ...interface{}) {
 					eventlogger.GetLogger(context.Background()).Printf("metahelm-test: "+msg, args...)
 				}),
 			}, nil
 		},
 	}
-	metahelm.ChartWaitPollInterval = 10 * time.Millisecond
+	metahelmlib.ChartWaitPollInterval = 10 * time.Millisecond
 	overrideNamespace = "nitro-foo-bar"
 	defer func() { overrideNamespace = "" }()
 	if err := ci.BuildAndInstallCharts(context.Background(), nenv, cl); err != nil {
@@ -1024,10 +1024,10 @@ func TestMetahelmBuildAndInstallThenUpgradeCharts(t *testing.T) {
 		"bar": ChartLocation{ChartPath: "testdata/chart"},
 		"cuz": ChartLocation{ChartPath: "testdata/chart"},
 	}
-	charts := []metahelm.Chart{
-		metahelm.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar", "cuz"}},
-		metahelm.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
-		metahelm.Chart{Title: "cuz", Location: "testdata/chart", DeploymentHealthIndication: metahelm.AtLeastOnePodHealthy, WaitUntilDeployment: "cuz"},
+	charts := []metahelmlib.Chart{
+		metahelmlib.Chart{Title: "foo", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "foo", DependencyList: []string{"bar", "cuz"}},
+		metahelmlib.Chart{Title: "bar", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "bar"},
+		metahelmlib.Chart{Title: "cuz", Location: "testdata/chart", DeploymentHealthIndication: metahelmlib.AtLeastOnePodHealthy, WaitUntilDeployment: "cuz"},
 	}
 	rm := match.RefMap{"foo": match.BranchInfo{Name: "master", SHA: "aaaa"}, "bar": match.BranchInfo{Name: "bar", SHA: "bbbbbb"}, "cuz": match.BranchInfo{Name: "cuz", SHA: "ccccccc"}}
 	rc := &models.RepoConfig{
@@ -1083,21 +1083,21 @@ func TestMetahelmBuildAndInstallThenUpgradeCharts(t *testing.T) {
 	dl.CreateQAEnvironment(context.Background(), nenv.Env)
 	hcfg := fakeHelmConfiguration(t)
 	ci := ChartInstaller{
-		kc:  fkc,
-		dl:  dl,
-		ib:  ib,
-		mc:  &metrics.FakeCollector{},
-		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelm.Manager, error) {
-			return &metahelm.Manager{
-				K8c: fkc,
+		kc: fkc,
+		dl: dl,
+		ib: ib,
+		mc: &metrics.FakeCollector{},
+		mhmf: func(ctx context.Context, kc kubernetes.Interface, hccfg config.HelmClientConfig, namespace string) (*metahelmlib.Manager, error) {
+			return &metahelmlib.Manager{
+				K8c:  fkc,
 				HCfg: hcfg,
-				LogF: metahelm.LogFunc(func(msg string, args ...interface{}) {
+				LogF: metahelmlib.LogFunc(func(msg string, args ...interface{}) {
 					eventlogger.GetLogger(context.Background()).Printf("metahelm-test: "+msg, args...)
 				}),
 			}, nil
 		},
 	}
-	metahelm.ChartWaitPollInterval = 10 * time.Millisecond
+	metahelmlib.ChartWaitPollInterval = 10 * time.Millisecond
 	t.Logf("running BuildAndInstallCharts...")
 	if err := ci.BuildAndInstallCharts(context.Background(), nenv, cl); err != nil {
 		t.Fatalf("should have succeeded: %v", err)
@@ -1244,22 +1244,22 @@ func TestMetahelmCleanup(t *testing.T) {
 		dl: dl,
 	}
 	ci.Cleanup(context.Background(), maxAge)
-	if _, err := fkc.CoreV1().Namespaces().Get(context.Background(),"foo", metav1.GetOptions{}); err == nil {
+	if _, err := fkc.CoreV1().Namespaces().Get(context.Background(), "foo", metav1.GetOptions{}); err == nil {
 		t.Fatalf("should have failed to find namespace foo")
 	}
-	if _, err := fkc.CoreV1().Namespaces().Get(context.Background(),"bar", metav1.GetOptions{}); err == nil {
+	if _, err := fkc.CoreV1().Namespaces().Get(context.Background(), "bar", metav1.GetOptions{}); err == nil {
 		t.Fatalf("should have failed to find namespace bar")
 	}
-	if _, err := fkc.CoreV1().Namespaces().Get(context.Background(),"uninvolved", metav1.GetOptions{}); err != nil {
+	if _, err := fkc.CoreV1().Namespaces().Get(context.Background(), "uninvolved", metav1.GetOptions{}); err != nil {
 		t.Fatalf("should have found namespace uninvolved: %v", err)
 	}
-	if _, err := fkc.RbacV1().ClusterRoleBindings().Get(context.Background(),"foo", metav1.GetOptions{}); err == nil {
+	if _, err := fkc.RbacV1().ClusterRoleBindings().Get(context.Background(), "foo", metav1.GetOptions{}); err == nil {
 		t.Fatalf("should have failed to find CRB foo")
 	}
-	if _, err := fkc.RbacV1().ClusterRoleBindings().Get(context.Background(),"bar", metav1.GetOptions{}); err == nil {
+	if _, err := fkc.RbacV1().ClusterRoleBindings().Get(context.Background(), "bar", metav1.GetOptions{}); err == nil {
 		t.Fatalf("should have failed to find CRB bar")
 	}
-	if _, err := fkc.RbacV1().ClusterRoleBindings().Get(context.Background(),"uninvolved", metav1.GetOptions{}); err != nil {
+	if _, err := fkc.RbacV1().ClusterRoleBindings().Get(context.Background(), "uninvolved", metav1.GetOptions{}); err != nil {
 		t.Fatalf("should have found CRB uninvolved: %v", err)
 	}
 }

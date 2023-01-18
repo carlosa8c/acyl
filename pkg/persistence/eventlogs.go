@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
+	guuid "github.com/gofrs/uuid"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -211,7 +212,7 @@ func (pg *PGLayer) SetEventStatusCompleted(id uuid.UUID, configStatus models.Eve
 }
 
 // SetEventStatusFailed will set the event status to indicate that it has failed and will persist the ChartError.
-func (pg *PGLayer) SetEventStatusFailed(id uuid.UUID, ce metahelm.ChartError) error {
+func (pg *PGLayer) SetEventStatusFailed(id uuid.UUID, ce metahelmlib.ChartError) error {
 	encodedChartErr, err := json.Marshal(ce)
 	if err != nil {
 		return errors.Wrap(err, "error marshaling chart error")
@@ -230,6 +231,14 @@ func (pg *PGLayer) SetEventStatusImageStarted(id uuid.UUID, name string) error {
 		  WHERE id = $3;`
 	_, err := pg.db.Exec(q, name, JSONTime(time.Now().UTC()), id)
 	return errors.Wrap(err, "error setting event status image to started")
+}
+
+func (pg *PGLayer) SetEventStatusImageBuildID(id uuid.UUID, name string, furanBuildID guuid.UUID) error {
+	q := `UPDATE event_logs SET
+			status = jsonb_set(status, ARRAY['tree',$1,'image'], status->'tree'->$1->'image' || json_build_object('id', $2::text)::jsonb)
+		  WHERE id = $3;`
+	_, err := pg.db.Exec(q, name, furanBuildID, id)
+	return errors.Wrap(err, "error setting event status image id")
 }
 
 func (pg *PGLayer) SetEventStatusImageCompleted(id uuid.UUID, name string, err bool) error {

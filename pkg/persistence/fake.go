@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -12,12 +11,13 @@ import (
 	"sync"
 	"time"
 
+	guuid "github.com/gofrs/uuid"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/metahelm/pkg/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	metahelmlib "github.com/Pluto-tv/metahelm/pkg/metahelm"
 )
 
 type lockingDataMap struct {
@@ -162,28 +162,28 @@ func (fdl *FakeDataLayer) Save(dir string) ([]string, error) {
 func (fdl *FakeDataLayer) Load(dir string) error {
 	fdl.data.Lock()
 	defer fdl.data.Unlock()
-	b, err := ioutil.ReadFile(filepath.Join(dir, "envs.json"))
+	b, err := os.ReadFile(filepath.Join(dir, "envs.json"))
 	if err != nil {
 		return errors.Wrap(err, "error reading envs.json")
 	}
 	if err := json.Unmarshal(b, &fdl.data.d); err != nil {
 		return errors.Wrap(err, "error unmarshaling envs.json")
 	}
-	b, err = ioutil.ReadFile(filepath.Join(dir, "helm.json"))
+	b, err = os.ReadFile(filepath.Join(dir, "helm.json"))
 	if err != nil {
 		return errors.Wrap(err, "error reading helm.json")
 	}
 	if err := json.Unmarshal(b, &fdl.data.helm); err != nil {
 		return errors.Wrap(err, "error unmarshaling helm.json")
 	}
-	b, err = ioutil.ReadFile(filepath.Join(dir, "k8s.json"))
+	b, err = os.ReadFile(filepath.Join(dir, "k8s.json"))
 	if err != nil {
 		return errors.Wrap(err, "error reading k8s.json")
 	}
 	if err := json.Unmarshal(b, &fdl.data.k8s); err != nil {
 		return errors.Wrap(err, "error unmarshaling k8s.json")
 	}
-	b, err = ioutil.ReadFile(filepath.Join(dir, "elogs.json"))
+	b, err = os.ReadFile(filepath.Join(dir, "elogs.json"))
 	if err != nil {
 		return errors.Wrap(err, "error reading elogs.json")
 	}
@@ -1100,7 +1100,7 @@ func (fdl *FakeDataLayer) SetEventStatusCompleted(id uuid.UUID, status models.Ev
 	return nil
 }
 
-func (fdl *FakeDataLayer) SetEventStatusFailed(id uuid.UUID, ce metahelm.ChartError) error {
+func (fdl *FakeDataLayer) SetEventStatusFailed(id uuid.UUID, ce metahelmlib.ChartError) error {
 	fdl.doDelay()
 	fdl.data.Lock()
 	defer fdl.data.Unlock()
@@ -1133,6 +1133,29 @@ func (fdl *FakeDataLayer) SetEventStatusImageStarted(id uuid.UUID, name string) 
 		return fmt.Errorf("%v not found in tree: %v: %v", name, len(keys), keys)
 	}
 	tn.Image.Started = time.Now().UTC()
+	fdl.data.elogs[id].Status.Tree[name] = tn
+	return nil
+}
+
+func (fdl *FakeDataLayer) SetEventStatusImageBuildID(id uuid.UUID, name string, furanBuildID guuid.UUID) error {
+	fdl.doDelay()
+	fdl.data.Lock()
+	defer fdl.data.Unlock()
+	elog := fdl.data.elogs[id]
+	if elog == nil {
+		return errors.New("eventlog not found")
+	}
+	tn, ok := elog.Status.Tree[name]
+	if !ok {
+		keys := make([]string, len(elog.Status.Tree))
+		i := 0
+		for k := range elog.Status.Tree {
+			keys[i] = k
+			i++
+		}
+		return fmt.Errorf("%v not found in tree: %v: %v", name, len(keys), keys)
+	}
+	tn.Image.ID = furanBuildID
 	fdl.data.elogs[id].Status.Tree[name] = tn
 	return nil
 }

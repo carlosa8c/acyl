@@ -6,18 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
 
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
 	"github.com/mholt/archiver"
 	"github.com/pkg/errors"
 )
@@ -43,7 +42,7 @@ func (dbb *DockerBuilderBackend) log(ctx context.Context, msg string, args ...in
 }
 
 // BuildImage synchronously builds and optionally pushes the image using the Docker Engine, returning when the build completes.
-func (dbb *DockerBuilderBackend) BuildImage(ctx context.Context, envName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
+func (dbb *DockerBuilderBackend) BuildImage(ctx context.Context, envName, depName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
 	if dbb.DC == nil {
 		return errors.New("docker client is nil")
 	}
@@ -54,9 +53,12 @@ func (dbb *DockerBuilderBackend) BuildImage(ctx context.Context, envName, github
 		return errors.New("repo client is nil")
 	}
 	if ops.DockerfilePath == "" {
-		ops.DockerfilePath = "Dockerfile"
+		ops.DockerfilePath = "."
 	}
-	tdir, err := ioutil.TempDir("", "acyl-docker-builder")
+	if ops.DockerfileName == "" {
+		ops.DockerfileName = "Dockerfile"
+	}
+	tdir, err := os.MkdirTemp("", "acyl-docker-builder")
 	if err != nil {
 		return fmt.Errorf("error getting temp dir: %w", err)
 	}
@@ -102,7 +104,7 @@ func (dbb *DockerBuilderBackend) BuildImage(ctx context.Context, envName, github
 		files[i] = filepath.Join(f.Name(), fi[i].Name())
 	}
 	dbb.log(ctx, "building context tar for %v", githubRepo)
-	bcontents, err := ioutil.TempFile("", "acyl-docker-builder-context-*.tar")
+	bcontents, err := os.CreateTemp("", "acyl-docker-builder-context-*.tar")
 	if err != nil {
 		return fmt.Errorf("error creating tar temp file: %w", err)
 	}
@@ -129,7 +131,7 @@ func (dbb *DockerBuilderBackend) BuildImage(ctx context.Context, envName, github
 		Remove:      true,
 		ForceRemove: true,
 		PullParent:  true,
-		Dockerfile:  ops.DockerfilePath,
+		Dockerfile:  filepath.Join(ops.DockerfilePath, ops.DockerfileName),
 		BuildArgs:   bargs,
 		AuthConfigs: dbb.Auths,
 	}
@@ -202,5 +204,5 @@ func (dbb *DockerBuilderBackend) BuildImage(ctx context.Context, envName, github
 
 func handleOutput(resp io.ReadCloser) error {
 	defer resp.Close()
-	return jsonmessage.DisplayJSONMessagesStream(resp, ioutil.Discard, 0, false, nil)
+	return jsonmessage.DisplayJSONMessagesStream(resp, io.Discard, 0, false, nil)
 }

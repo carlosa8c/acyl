@@ -3,16 +3,16 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/testhelper/testdatalayer"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/testhelper/testdatalayer"
 	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
@@ -20,7 +20,7 @@ const (
 	testDataPath = "../testhelper/testdatalayer/data/db.json"
 )
 
-var testlogger = log.New(ioutil.Discard, "", log.LstdFlags)
+var testlogger = log.New(io.Discard, "", log.LstdFlags)
 
 // fake testing key
 var key = `-----BEGIN RSA PRIVATE KEY-----
@@ -65,7 +65,7 @@ func TestAPIv0List(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -84,7 +84,7 @@ func TestAPIv0List(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -95,7 +95,7 @@ func TestAPIv0List(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error unmarshaling results: %v", err)
 	}
-	if len(res) != 7 {
+	if len(res) != 8 {
 		t.Fatalf("unexpected results length: %v", len(res))
 	}
 }
@@ -107,7 +107,7 @@ func TestAPIv0ListUserAPIKey(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -131,7 +131,7 @@ func TestAPIv0ListUserAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -154,7 +154,7 @@ func TestAPIv0SearchSimple(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -174,7 +174,7 @@ func TestAPIv0SearchSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -197,7 +197,7 @@ func TestAPIv0SearchComplex(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -217,7 +217,7 @@ func TestAPIv0SearchComplex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -240,7 +240,7 @@ func TestAPIv0SearchBadPROnly(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -259,7 +259,7 @@ func TestAPIv0SearchBadPROnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusBadRequest {
@@ -274,7 +274,7 @@ func TestAPIv0SearchNotFound(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -293,7 +293,7 @@ func TestAPIv0SearchNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -316,7 +316,7 @@ func TestAPIv0SearchEmptyQuery(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -336,7 +336,7 @@ func TestAPIv0SearchEmptyQuery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusBadRequest {
@@ -351,7 +351,7 @@ func TestAPIv0SearchBadStatusOnly(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -370,7 +370,7 @@ func TestAPIv0SearchBadStatusOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusBadRequest {
@@ -385,7 +385,7 @@ func TestAPIv0SearchSuccessOnly(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -405,7 +405,7 @@ func TestAPIv0SearchSuccessOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -420,7 +420,7 @@ func TestAPIv0EnvDetails(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -440,7 +440,7 @@ func TestAPIv0EnvDetails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -463,7 +463,7 @@ func TestAPIv0EnvDetailsUserAPIKey(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -487,7 +487,7 @@ func TestAPIv0EnvDetailsUserAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -510,7 +510,7 @@ func TestAPIv0EnvDetailsUserAPIKeyForbidden(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv0, err := newV0API(dl, nil, nil, &ghclient.FakeRepoClient{}, ghcfg, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -534,7 +534,7 @@ func TestAPIv0EnvDetailsUserAPIKeyForbidden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusForbidden {

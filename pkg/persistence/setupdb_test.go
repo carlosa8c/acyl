@@ -8,7 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -20,8 +20,8 @@ import (
 	"github.com/lib/pq/hstore"
 
 	"github.com/DavidHuie/gomigrate"
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/models"
 	"github.com/pkg/errors"
 )
 
@@ -75,7 +75,7 @@ func (tdl *TestDataLayer) createPGTables() error {
 		return errors.Wrap(err, "error creating postgres connection")
 	}
 	defer db.Close()
-	logger := log.New(ioutil.Discard, "", log.LstdFlags)
+	logger := log.New(io.Discard, "", log.LstdFlags)
 	migrator, err := gomigrate.NewMigratorWithLogger(db.DB, gomigrate.Postgres{}, "./migrations", logger)
 	if err != nil {
 		return errors.Wrap(err, "error creating migrator")
@@ -340,7 +340,7 @@ func (tdl *TestDataLayer) Setup(path string) error {
 }
 
 func (tdl *TestDataLayer) tearDownPG() error {
-	logger := log.New(ioutil.Discard, "", log.LstdFlags)
+	logger := log.New(io.Discard, "", log.LstdFlags)
 	migrator, err := gomigrate.NewMigratorWithLogger(tdl.pgdb.DB, gomigrate.Postgres{}, "./migrations", logger)
 	if err != nil {
 		return errors.Wrap(err, "error creating migrator")

@@ -3,7 +3,7 @@ package locker
 import (
 	"context"
 	"database/sql"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"math/rand"
@@ -23,7 +23,7 @@ type testTableCoordinator struct {
 }
 
 func (ttc *testTableCoordinator) destroy() error {
-	logger := log.New(ioutil.Discard, "", log.LstdFlags)
+	logger := log.New(io.Discard, "", log.LstdFlags)
 	migrator, err := gomigrate.NewMigratorWithLogger(ttc.db, gomigrate.Postgres{}, "./migrations", logger)
 	defer ttc.db.Close()
 	if err != nil {
@@ -41,7 +41,7 @@ func (ttc *testTableCoordinator) setup() error {
 		return errors.Wrap(err, "error creating postgres connection")
 	}
 	ttc.db = db
-	logger := log.New(ioutil.Discard, "", log.LstdFlags)
+	logger := log.New(io.Discard, "", log.LstdFlags)
 	migrator, err := gomigrate.NewMigratorWithLogger(ttc.db, gomigrate.Postgres{}, "./migrations", logger)
 	if err != nil {
 		return errors.Wrap(err, "error creating migrator")

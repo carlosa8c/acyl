@@ -2,13 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/secrets"
-	"github.com/dollarshaveclub/pvc"
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/secrets"
+	"github.com/Pluto-tv/pvc"
 	"github.com/spf13/cobra"
 )
 
@@ -29,8 +28,8 @@ var RootCmd = &cobra.Command{
 	Long:  `Dynamic environment server API and client utility`,
 }
 
-//shorthands in use by register: i p r m o
-//shorthands here: abcdefg n jkl p q
+// shorthands in use by register: i p r m o
+// shorthands here: abcdefg n jkl p q
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&vaultConfig.Addr, "vault-addr", "a", os.Getenv("VAULT_ADDR"), "Vault URL (if using Vault secret backend)")
 	RootCmd.PersistentFlags().StringVarP(&vaultConfig.Token, "vault-token", "b", os.Getenv("VAULT_TOKEN"), "Vault token (if using token auth & Vault secret backend)")
@@ -68,7 +67,7 @@ func getSecretClient() (*pvc.SecretsClient, error) {
 		case vaultConfig.K8sAuth:
 			log.Printf("secrets: using vault k8s auth")
 			vat = pvc.K8sVaultAuth
-			jwt, err := ioutil.ReadFile(vaultConfig.K8sJWTPath)
+			jwt, err := os.ReadFile(vaultConfig.K8sJWTPath)
 			if err != nil {
 				clierr("error reading k8s jwt path: %v", err)
 			}

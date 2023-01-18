@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v38/github"
+	"github.com/google/go-github/v52/github"
 	"github.com/gregjones/httpcache"
 	"github.com/pkg/errors"
 	"github.com/shurcooL/githubv4"
@@ -291,8 +291,15 @@ func (c *clientCreator) NewTokenSourceV4Client(ts oauth2.TokenSource) (*githubv4
 }
 
 func (c *clientCreator) newHTTPClient() *http.Client {
+	transport := c.transport
+	if transport == nil {
+		// While http.Client will use the default when given a a nil transport,
+		// we assume a non-nil transport when applying middleware
+		transport = http.DefaultTransport
+	}
+
 	return &http.Client{
-		Transport: c.transport,
+		Transport: transport,
 		Timeout:   c.timeout,
 	}
 }

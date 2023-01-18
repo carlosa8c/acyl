@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Pluto-tv/acyl/pkg/config"
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/google/go-github/v38/github"
+	"github.com/google/go-github/v52/github"
 	"golang.org/x/oauth2"
 )
 

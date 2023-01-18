@@ -2,16 +2,16 @@ package ghevent
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
 
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 
-	"github.com/dollarshaveclub/acyl/pkg/mocks"
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/mocks"
+	"github.com/Pluto-tv/acyl/pkg/models"
 	"github.com/golang/mock/gomock"
 )
 
@@ -122,7 +122,7 @@ func newDummyClosedGithubEvent() *GitHubEvent {
 
 func newDummyPushGithubEvent(t *testing.T) ([]byte, *GitHubEvent) {
 	event := GitHubEvent{}
-	b, err := ioutil.ReadFile("./testdata/example_github_push_payload.json")
+	b, err := os.ReadFile("./testdata/example_github_push_payload.json")
 	if err != nil {
 		t.Fatalf("error reading test payload: %v", err)
 	}

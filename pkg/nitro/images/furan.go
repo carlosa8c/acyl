@@ -6,10 +6,10 @@ import (
 	"io"
 	"log"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
-	furan "github.com/dollarshaveclub/furan/rpcclient"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
+	furan "github.com/Pluto-tv/furan/rpcclient"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +40,7 @@ func NewFuranBuilderBackend(addrs []string, dl persistence.DataLayer, mc metrics
 }
 
 // BuildImage synchronously builds the image using Furan, returning when the build completes.
-func (fib *FuranBuilderBackend) BuildImage(ctx context.Context, envName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
+func (fib *FuranBuilderBackend) BuildImage(ctx context.Context, envName, depName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
 	logger := eventlogger.GetLogger(ctx)
 	if ops.DockerfilePath == "" {
 		ops.DockerfilePath = "Dockerfile"

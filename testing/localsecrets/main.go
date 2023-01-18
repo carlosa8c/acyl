@@ -5,13 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/pflag"
 
@@ -68,7 +67,7 @@ func getAcylEnv() (models.QAEnvironment, *models.KubernetesEnvironment) {
 		ferr("error loading state: %v", err)
 	}
 
-	envs, err := dl.Search(context.Background(), models.EnvSearchParameters{Repo: "dollarshaveclub/acyl", Status: models.Success})
+	envs, err := dl.Search(context.Background(), models.EnvSearchParameters{Repo: "Pluto-tv/acyl", Status: models.Success})
 	if err != nil {
 		ferr("error searching environments: %v", err)
 	}
@@ -98,7 +97,7 @@ func getQuayToken() string {
 var imagePullSecretPath string
 
 func getImagePullSecret() string {
-	d, err := ioutil.ReadFile(imagePullSecretPath)
+	d, err := os.ReadFile(imagePullSecretPath)
 	if err != nil {
 		ferr("error reading image pull secret file: %v", err)
 	}
@@ -108,7 +107,7 @@ func getImagePullSecret() string {
 var FuranDockerCfgPath string
 
 func getFuranDockerCfg() string {
-	d, err := ioutil.ReadFile(FuranDockerCfgPath)
+	d, err := os.ReadFile(FuranDockerCfgPath)
 	if err != nil {
 		ferr("error reading docker cfg file: %v", err)
 	}

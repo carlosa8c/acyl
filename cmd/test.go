@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -16,30 +15,30 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/api"
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/api"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
 
-	"github.com/dollarshaveclub/acyl/pkg/nitro/notifier"
+	"github.com/Pluto-tv/acyl/pkg/nitro/notifier"
 
-	"github.com/dollarshaveclub/acyl/pkg/locker"
-	oldmetrics "github.com/dollarshaveclub/acyl/pkg/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/namegen"
-	nitroenv "github.com/dollarshaveclub/acyl/pkg/nitro/env"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/images"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metahelm"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/locker"
+	oldmetrics "github.com/Pluto-tv/acyl/pkg/metrics"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/namegen"
+	nitroenv "github.com/Pluto-tv/acyl/pkg/nitro/env"
+	"github.com/Pluto-tv/acyl/pkg/nitro/images"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metahelm"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
 	"gopkg.in/src-d/go-billy.v4/osfs"
 
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/mitchellh/go-homedir"
 
+	"github.com/Pluto-tv/acyl/pkg/config"
 	dockerconfig "github.com/docker/cli/cli/config"
 	dockertypes "github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/dollarshaveclub/acyl/pkg/config"
 	"github.com/dollarshaveclub/line"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -163,7 +162,12 @@ func init() {
 		log.Printf("warning: no valid data directory found (tried: %v); using ~/.acyl", defaultDataDirs)
 		defaultDataDir = filepath.Join(hd, ".acyl")
 	}
-	configTestCmd.PersistentFlags().StringVar(&testEnvCfg.wordnetpath, "wordnet-file", filepath.Join(defaultDataDir, "acyl", "words.json.gz"), "path to wordnet file for name generation")
+	// prefer wordnet file within this working directory tree if it exists
+	wnfpath := filepath.Join(wd, "data", "words.json.gz")
+	if _, err := os.Stat(wnfpath); err != nil {
+		wnfpath = filepath.Join(defaultDataDir, "acyl", "words.json.gz")
+	}
+	configTestCmd.PersistentFlags().StringVar(&testEnvCfg.wordnetpath, "wordnet-file", wnfpath, "path to wordnet file for name generation")
 	// prefer assets within this working directory if they exist
 	uiAssetsPath := filepath.Join(wd, "ui")
 	if _, err := os.Stat(uiAssetsPath); err != nil {
@@ -271,7 +275,7 @@ func loadImagePullSecret() (config.K8sSecret, error) {
 		return out, errors.New("image pull secret path is empty")
 	}
 	s := &corev1.Secret{}
-	d, err := ioutil.ReadFile(testEnvCfg.imagepullsecretPath)
+	d, err := os.ReadFile(testEnvCfg.imagepullsecretPath)
 	if err != nil {
 		return out, errors.Wrap(err, "error reading image pull secret")
 	}
@@ -311,10 +315,14 @@ func getImageBackend(dl persistence.DataLayer, rc ghclient.RepoClient, auths map
 	switch {
 	case testEnvCfg.buildMode == "none":
 		return &images.NoneBackend{}, nil
-	case strings.HasPrefix(testEnvCfg.buildMode, "furan://"):
-		fb, err := images.NewFuranBuilderBackend([]string{testEnvCfg.buildMode[8:len(testEnvCfg.buildMode)]}, dl, &oldmetrics.FakeCollector{}, ioutil.Discard, "furan.test-client")
+	case strings.HasPrefix(testEnvCfg.buildMode, "furan2://"):
+
+		// TODO: add support for static GH token and Furan 2 API key
+		clierr("Furan 2 support not fully implemented for local use yet")
+
+		fb, err := images.NewFuran2BuilderBackend(testEnvCfg.buildMode[8:len(testEnvCfg.buildMode)], "", 0, false, dl, nil, &oldmetrics.FakeCollector{})
 		if err != nil {
-			return nil, errors.Wrap(err, "error getting furan backend")
+			return nil, errors.Wrap(err, "error getting furan 2 backend")
 		}
 		return fb, nil
 	case testEnvCfg.buildMode == "docker" || testEnvCfg.buildMode == "docker-nopush":

@@ -3,7 +3,7 @@ package ghclient
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -236,7 +236,7 @@ func (lw *LocalWrapper) localGetFileContents(repopath, repo, filepath, ref strin
 			return nil, errors.Wrap(err, "error opening file")
 		}
 		defer f.Close()
-		return ioutil.ReadAll(f)
+		return io.ReadAll(f)
 	}
 	lr.Lock()
 	defer lr.Unlock()
@@ -261,7 +261,7 @@ func (lw *LocalWrapper) localGetFileContents(repopath, repo, filepath, ref strin
 		return nil, errors.Wrap(err, "error getting reader")
 	}
 	defer rc.Close()
-	contents, err := ioutil.ReadAll(rc)
+	contents, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, errors.Wrap(err, "error reading file")
 	}
@@ -306,7 +306,7 @@ func (lw *LocalWrapper) localGetDirectoryContents(repopath, repo, dirpath, ref s
 				return errors.Wrap(err, "error opening file")
 			}
 			defer f.Close()
-			contents, err := ioutil.ReadAll(f)
+			contents, err := io.ReadAll(f)
 			if err != nil {
 				return errors.Wrap(err, "error reading triggering repo file")
 			}
@@ -356,7 +356,7 @@ func (lw *LocalWrapper) localGetDirectoryContents(repopath, repo, dirpath, ref s
 				return errors.Wrap(err, "error getting reader")
 			}
 			defer rc.Close()
-			contents, err := ioutil.ReadAll(rc)
+			contents, err := io.ReadAll(rc)
 			if err != nil {
 				return errors.Wrap(err, "error reading file")
 			}
@@ -370,7 +370,7 @@ func (lw *LocalWrapper) localGetDirectoryContents(repopath, repo, dirpath, ref s
 				return errors.Wrap(err, "error getting reader for symlink")
 			}
 			defer rc.Close()
-			target, err := ioutil.ReadAll(rc)
+			target, err := io.ReadAll(rc)
 			if err != nil {
 				return errors.Wrap(err, "error reading symlink")
 			}
@@ -390,7 +390,7 @@ func (lw *LocalWrapper) localGetDirectoryContents(repopath, repo, dirpath, ref s
 }
 
 func (lw *LocalWrapper) localGetRepoArchive(repopath, repo, ref string) (string, error) {
-	f, err := ioutil.TempFile("", "acyl-localwrapper-repo-archive-*.tar.gz")
+	f, err := os.CreateTemp("", "acyl-localwrapper-repo-archive-*.tar.gz")
 	if err != nil {
 		return "", errors.Wrap(err, "error creating temp file")
 	}

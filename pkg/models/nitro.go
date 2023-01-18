@@ -9,7 +9,7 @@ import (
 
 	"github.com/lib/pq"
 
-	nitroerrors "github.com/dollarshaveclub/acyl/pkg/nitro/errors"
+	nitroerrors "github.com/Pluto-tv/acyl/pkg/nitro/errors"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
@@ -48,7 +48,7 @@ func truncateString(s string, n uint) string {
 
 // GetName returns a name derived from a repository name. This is used to generate a name for the triggering repository.
 func GetName(repo string) string {
-	return truncateString(strings.Replace(repo, "/", "-", -1), 64)
+	return truncateString(strings.Replace(strings.ToLower(repo), "/", "-", -1), 64)
 }
 
 // RepoConfigAppMetadata models app-specific metadata for the primary application
@@ -62,6 +62,7 @@ type RepoConfigAppMetadata struct {
 	ChartVarsRepoPath string   `yaml:"chart_vars_repo_path" json:"chart_vars_repo_path"`
 	Image             string   `yaml:"image" json:"image"`
 	DockerfilePath    string   `yaml:"dockerfile_path" json:"dockerfile_path"`
+	DockerfileName    string   `yaml:"dockerfile_name" json:"dockerfile_name"`
 	ChartTagValue     string   `yaml:"image_tag_value" json:"image_tag_value"`
 	NamespaceValue    string   `yaml:"namespace_value" json:"namespace_value"`
 	EnvNameValue      string   `yaml:"env_name_value" json:"env_name_value"`
@@ -72,7 +73,8 @@ const (
 	DefaultChartTagValue  = "image.tag"
 	DefaultNamespaceValue = "namespace"
 	DefaultEnvNameValue   = "env_name"
-	DefaultDockerfilePath = "Dockerfile"
+	DefaultDockerfilePath = "."
+	DefaultDockerfileName = "Dockerfile"
 )
 
 // SetValueDefaults sets default chart value names if empty
@@ -88,6 +90,9 @@ func (ram *RepoConfigAppMetadata) SetValueDefaults() {
 	}
 	if ram.DockerfilePath == "" {
 		ram.DockerfilePath = DefaultDockerfilePath
+	}
+	if ram.DockerfileName == "" {
+		ram.DockerfileName = DefaultDockerfileName
 	}
 }
 

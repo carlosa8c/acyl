@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/nitro/metrics"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/nitro/metrics"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 )
 
 type testImageBuildBackend struct {
 	f func(ctx context.Context, envName, repo, imagerepo, ref string, ops BuildOptions) error
 }
 
-func (tib *testImageBuildBackend) BuildImage(ctx context.Context, envName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
+func (tib *testImageBuildBackend) BuildImage(ctx context.Context, envName, depName, githubRepo, imageRepo, ref string, ops BuildOptions) error {
 	return tib.f(ctx, envName, githubRepo, imageRepo, ref, ops)
 }
 
@@ -174,6 +174,37 @@ func TestImageBuilderStartBuildsDelay(t *testing.T) {
 	}
 	if !b.Done() {
 		t.Fatalf("all builds should be done")
+	}
+	if err != nil {
+		t.Fatalf("build should have succeeded: %v", err)
+	}
+}
+
+func TestImageBuilderStartBuildsDockerfileNamePath(t *testing.T) {
+	f := func(ctx context.Context, envName, repo, imagerepo, ref string, ops BuildOptions) error {
+		return nil
+	}
+	ib := newTestBuilder(f)
+	rc := &models.RepoConfig{
+		Application: models.RepoConfigAppMetadata{
+			Repo:           "foo/bar",
+			Ref:            "abcdef",
+			Branch:         "master",
+			Image:          "quay.io/foo/bar",
+			DockerfilePath: "dockerfiles/foo",
+			DockerfileName: "dockerfile.foo",
+		},
+	}
+	envname := "this-is-a-name"
+	b, err := ib.StartBuilds(context.Background(), envname, rc)
+	if err != nil {
+		t.Fatalf("should have succeeded: %v", err)
+	}
+	defer b.Stop()
+	time.Sleep(5 * time.Millisecond)
+	done, err := b.Completed(envname, models.GetName(rc.Application.Repo))
+	if !done {
+		t.Fatalf("should be done")
 	}
 	if err != nil {
 		t.Fatalf("build should have succeeded: %v", err)

@@ -1,19 +1,27 @@
 package orm
 
+import (
+	"github.com/go-pg/pg/types"
+)
+
 type Discard struct {
 	hookStubs
 }
 
 var _ Model = (*Discard)(nil)
 
-func (d Discard) NewModel() ColumnScanner {
-	return d
-}
-
-func (Discard) AddModel(_ ColumnScanner) error {
+func (Discard) Init() error {
 	return nil
 }
 
-func (Discard) ScanColumn(colIdx int, colName string, b []byte) error {
+func (m Discard) NewModel() ColumnScanner {
+	return m
+}
+
+func (m Discard) AddModel(ColumnScanner) error {
+	return nil
+}
+
+func (m Discard) ScanColumn(colIdx int, colName string, rd types.Reader, n int) error {
 	return nil
 }

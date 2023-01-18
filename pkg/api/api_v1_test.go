@@ -3,17 +3,17 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/testhelper/testdatalayer"
 	"github.com/docker/distribution/uuid"
-	"github.com/dollarshaveclub/acyl/pkg/config"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/testhelper/testdatalayer"
 	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
@@ -24,7 +24,7 @@ func TestAPIv1SearchSimple(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -43,7 +43,7 @@ func TestAPIv1SearchSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -71,7 +71,7 @@ func TestAPIv1EnvDetails(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -90,7 +90,7 @@ func TestAPIv1EnvDetails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -118,7 +118,7 @@ func TestAPIv1EnvDetailsUserAPIKey(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -142,7 +142,7 @@ func TestAPIv1EnvDetailsUserAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -170,7 +170,7 @@ func TestAPIv1EnvDetailsUserAPIKeyForbidden(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -194,7 +194,7 @@ func TestAPIv1EnvDetailsUserAPIKeyForbidden(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusForbidden {
@@ -209,7 +209,7 @@ func TestAPIv1RecentDefault(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -228,7 +228,7 @@ func TestAPIv1RecentDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -259,12 +259,12 @@ func TestAPIv1RecentDefaultUserAPIKey(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
-	id, err := dl.CreateAPIKey(context.Background(), models.ReadOnlyPermission,"foo-description", "bobsmith")
+	id, err := dl.CreateAPIKey(context.Background(), models.ReadOnlyPermission, "foo-description", "bobsmith")
 	if err != nil {
 		t.Fatalf("api key creation should have succeeded")
 	}
@@ -282,7 +282,7 @@ func TestAPIv1RecentDefaultUserAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -313,12 +313,12 @@ func TestAPIv1RecentDefaultUserAPIKeyEmpty(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
 	}
-	id, err := dl.CreateAPIKey(context.Background(), models.ReadOnlyPermission,"foo-description", "foo-user")
+	id, err := dl.CreateAPIKey(context.Background(), models.ReadOnlyPermission, "foo-description", "foo-user")
 	if err != nil {
 		t.Fatalf("api key creation should have succeeded")
 	}
@@ -336,7 +336,7 @@ func TestAPIv1RecentDefaultUserAPIKeyEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -359,7 +359,7 @@ func TestAPIv1RecentDefaultUserAPIKeyUnauthorized(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -378,7 +378,7 @@ func TestAPIv1RecentDefaultUserAPIKeyUnauthorized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -393,7 +393,7 @@ func TestAPIv1RecentEmpty(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -412,7 +412,7 @@ func TestAPIv1RecentEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -435,7 +435,7 @@ func TestAPIv1RecentBadValue(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -454,7 +454,7 @@ func TestAPIv1RecentBadValue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusBadRequest {
@@ -469,7 +469,7 @@ func TestAPIv1RecentNegativeValue(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -488,7 +488,7 @@ func TestAPIv1RecentNegativeValue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusBadRequest {
@@ -503,7 +503,7 @@ func TestAPIv1RecentTwoDays(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -522,7 +522,7 @@ func TestAPIv1RecentTwoDays(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -545,7 +545,7 @@ func TestAPIv1RecentFiveDays(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -564,7 +564,7 @@ func TestAPIv1RecentFiveDays(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -587,7 +587,7 @@ func TestAPIv1RecentIncludeDestroyed(t *testing.T) {
 	}
 	defer tdl.TearDown()
 
-	sc := config.ServerConfig{APIKeys: []string{"foo","bar","baz"}}
+	sc := config.ServerConfig{APIKeys: []string{"foo", "bar", "baz"}}
 	apiv1, err := newV1API(dl, nil, nil, sc, testlogger)
 	if err != nil {
 		t.Fatalf("error creating api: %v", err)
@@ -606,7 +606,7 @@ func TestAPIv1RecentIncludeDestroyed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error executing request: %v", err)
 	}
-	bb, _ := ioutil.ReadAll(resp.Body)
+	bb, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {

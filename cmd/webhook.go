@@ -5,12 +5,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 
-	"github.com/dollarshaveclub/acyl/pkg/ghevent"
+	"github.com/Pluto-tv/acyl/pkg/ghevent"
 	"github.com/google/go-github/github"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -166,7 +166,7 @@ func webhook(cmd *cobra.Command, args []string) {
 		log.Fatalf("error performing http request: %v", err)
 	}
 	defer resp.Body.Close()
-	rb, err := ioutil.ReadAll(resp.Body)
+	rb, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("error reading response body: %v", err)
 	}

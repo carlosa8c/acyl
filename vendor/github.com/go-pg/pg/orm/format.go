@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-pg/pg/internal"
 	"github.com/go-pg/pg/internal/parser"
 	"github.com/go-pg/pg/types"
 )
 
-var formatter Formatter
+var defaultFmter Formatter
 
 type FormatAppender interface {
 	AppendFormat([]byte, QueryFormatter) []byte
@@ -30,42 +31,46 @@ type queryParamsAppender struct {
 }
 
 var _ FormatAppender = (*queryParamsAppender)(nil)
+var _ types.ValueAppender = (*queryParamsAppender)(nil)
 
-func Q(query string, params ...interface{}) queryParamsAppender {
-	return queryParamsAppender{query, params}
+func Q(query string, params ...interface{}) *queryParamsAppender {
+	return &queryParamsAppender{query, params}
 }
 
-func (q queryParamsAppender) AppendFormat(b []byte, f QueryFormatter) []byte {
-	return f.FormatQuery(b, q.query, q.params...)
+func (q *queryParamsAppender) AppendFormat(b []byte, fmter QueryFormatter) []byte {
+	return fmter.FormatQuery(b, q.query, q.params...)
 }
 
-func (q queryParamsAppender) AppendValue(b []byte, quote int) ([]byte, error) {
-	return q.AppendFormat(b, formatter), nil
+func (q *queryParamsAppender) AppendValue(b []byte, quote int) []byte {
+	return q.AppendFormat(b, defaultFmter)
+}
+
+func (q *queryParamsAppender) Value() types.Q {
+	b := q.AppendValue(nil, 1)
+	return types.Q(internal.BytesToString(b))
 }
 
 //------------------------------------------------------------------------------
 
-type whereGroupAppender struct {
-	sep   string
-	where []sepFormatAppender
+type condGroupAppender struct {
+	sep  string
+	cond []sepFormatAppender
 }
 
-var _ FormatAppender = (*whereAppender)(nil)
-var _ sepFormatAppender = (*whereAppender)(nil)
+var _ FormatAppender = (*condAppender)(nil)
+var _ sepFormatAppender = (*condAppender)(nil)
 
-func (q whereGroupAppender) AppendSep(b []byte) []byte {
+func (q *condGroupAppender) AppendSep(b []byte) []byte {
 	return append(b, q.sep...)
 }
 
-func (q whereGroupAppender) AppendFormat(b []byte, f QueryFormatter) []byte {
+func (q *condGroupAppender) AppendFormat(b []byte, fmter QueryFormatter) []byte {
 	b = append(b, '(')
-	for i, app := range q.where {
+	for i, app := range q.cond {
 		if i > 0 {
-			b = append(b, ' ')
 			b = app.AppendSep(b)
-			b = append(b, ' ')
 		}
-		b = app.AppendFormat(b, f)
+		b = app.AppendFormat(b, fmter)
 	}
 	b = append(b, ')')
 	return b
@@ -73,22 +78,22 @@ func (q whereGroupAppender) AppendFormat(b []byte, f QueryFormatter) []byte {
 
 //------------------------------------------------------------------------------
 
-type whereAppender struct {
+type condAppender struct {
 	sep    string
-	where  string
+	cond   string
 	params []interface{}
 }
 
-var _ FormatAppender = (*whereAppender)(nil)
-var _ sepFormatAppender = (*whereAppender)(nil)
+var _ FormatAppender = (*condAppender)(nil)
+var _ sepFormatAppender = (*condAppender)(nil)
 
-func (q whereAppender) AppendSep(b []byte) []byte {
+func (q *condAppender) AppendSep(b []byte) []byte {
 	return append(b, q.sep...)
 }
 
-func (q whereAppender) AppendFormat(b []byte, f QueryFormatter) []byte {
+func (q *condAppender) AppendFormat(b []byte, fmter QueryFormatter) []byte {
 	b = append(b, '(')
-	b = f.FormatQuery(b, q.where, q.params...)
+	b = fmter.FormatQuery(b, q.cond, q.params...)
 	b = append(b, ')')
 	return b
 }
@@ -101,8 +106,24 @@ type fieldAppender struct {
 
 var _ FormatAppender = (*fieldAppender)(nil)
 
-func (a fieldAppender) AppendFormat(b []byte, f QueryFormatter) []byte {
+func (a fieldAppender) AppendFormat(b []byte, fmter QueryFormatter) []byte {
 	return types.AppendField(b, a.field, 1)
+}
+
+//------------------------------------------------------------------------------
+
+type dummyFormatter struct{}
+
+func (f dummyFormatter) FormatQuery(b []byte, query string, params ...interface{}) []byte {
+	return append(b, query...)
+}
+
+func isPlaceholderFormatter(fmter QueryFormatter) bool {
+	if fmter == nil {
+		return false
+	}
+	b := fmter.FormatQuery(nil, "?", 0)
+	return bytes.Equal(b, []byte("?"))
 }
 
 //------------------------------------------------------------------------------
@@ -129,7 +150,7 @@ func (f Formatter) String() string {
 	return " " + strings.Join(ss, " ")
 }
 
-func (f Formatter) copy() Formatter {
+func (f Formatter) clone() Formatter {
 	var cp Formatter
 	for param, value := range f.namedParams {
 		cp.SetParam(param, value)
@@ -144,10 +165,14 @@ func (f *Formatter) SetParam(param string, value interface{}) {
 	f.namedParams[param] = value
 }
 
-func (f *Formatter) WithParam(param string, value interface{}) Formatter {
-	cp := f.copy()
+func (f Formatter) WithParam(param string, value interface{}) Formatter {
+	cp := f.clone()
 	cp.SetParam(param, value)
 	return cp
+}
+
+func (f Formatter) Param(param string) interface{} {
+	return f.namedParams[param]
 }
 
 func (f Formatter) Append(dst []byte, src string, params ...interface{}) []byte {
@@ -172,11 +197,11 @@ func (f Formatter) append(dst []byte, p *parser.Parser, params []interface{}) []
 	var paramsIndex int
 	var namedParamsOnce bool
 	var tableParams *tableParams
-	var model tableModel
+	var model TableModel
 
 	if len(params) > 0 {
 		var ok bool
-		model, ok = params[len(params)-1].(tableModel)
+		model, ok = params[len(params)-1].(TableModel)
 		if ok {
 			params = params[:len(params)-1]
 		}
@@ -195,7 +220,8 @@ func (f Formatter) append(dst []byte, p *parser.Parser, params []interface{}) []
 		}
 		dst = append(dst, b...)
 
-		if id, numeric := p.ReadIdentifier(); id != "" {
+		id, numeric := p.ReadIdentifier()
+		if id != "" {
 			if numeric {
 				idx, err := strconv.Atoi(id)
 				if err != nil {
@@ -211,7 +237,8 @@ func (f Formatter) append(dst []byte, p *parser.Parser, params []interface{}) []
 			}
 
 			if f.namedParams != nil {
-				if param, ok := f.namedParams[id]; ok {
+				param, paramOK := f.namedParams[id]
+				if paramOK {
 					dst = f.appendParam(dst, param)
 					continue
 				}
@@ -219,12 +246,7 @@ func (f Formatter) append(dst []byte, p *parser.Parser, params []interface{}) []
 
 			if !namedParamsOnce && len(params) > 0 {
 				namedParamsOnce = true
-				if len(params) > 0 {
-					tableParams, ok = newTableParams(params[len(params)-1])
-					if ok {
-						params = params[:len(params)-1]
-					}
-				}
+				tableParams, _ = newTableParams(params[len(params)-1])
 			}
 
 			if tableParams != nil {

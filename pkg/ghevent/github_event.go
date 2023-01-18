@@ -9,15 +9,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dollarshaveclub/acyl/pkg/eventlogger"
-	"github.com/dollarshaveclub/acyl/pkg/ghclient"
-	"github.com/dollarshaveclub/acyl/pkg/models"
-	"github.com/dollarshaveclub/acyl/pkg/persistence"
+	"github.com/Pluto-tv/acyl/pkg/eventlogger"
+	"github.com/Pluto-tv/acyl/pkg/ghclient"
+	"github.com/Pluto-tv/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
 // ActionType enumerates the different actions we need to take
+//
 //go:generate stringer -type=ActionType
 type ActionType int
 
@@ -70,6 +71,7 @@ type GitHubEventUser struct {
 }
 
 // GitHubEventType enumerates the types of webhook events we support
+//
 //go:generate stringer -type=GitHubEventType
 type GitHubEventType int
 

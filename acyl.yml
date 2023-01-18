@@ -5,42 +5,34 @@ target_branches:
   - master
 
 application:
-  chart_path: '.helm/charts/acyl'
-  chart_vars_repo_path: 'dollarshaveclub/helm-charts@master:releases/kube.shave.io/acyl/dqa.yml'
-  image: quay.io/dollarshaveclub/acyl
+  chart_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl'
+  chart_vars_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl/environments/values-dqa.yaml'
+  image: '972525491246.dkr.ecr.us-east-1.amazonaws.com/acyl'
   value_overrides:
-    - "app.furan2.enabled=true"
-    - "app.furan2.disable_tls_verification=true"
-    - "app.furan2.addr=furan:4000"
 # local:
 #    - "image.pullPolicy=IfNotPresent"
-#    - "app.ui.enforce_oauth=false"
-#    - "ingress.traefik.enabled=false"
-#    - "app.dogstatsd_addr="
-#    - "app.datadog_tracing_agent_addr="
-#    - "app.secrets_backend=env"
-#    - "app.secrets_mapping=ACYL_{{ .ID }}"
-#    - "app.secrets_from_env=true"
-#    - "app.operation_timeout_override=10m"
-#    - "app.k8s_secret_injections=image-pull-secret=k8s/image_pull_secret"
-#    - "app.ui_base_url=http://192.168.64.10:4000"
-#    - "cronautoscaling.enabled=false"
+#    - "app.ui.enforceOauth=false"
+#    - "app.datadog.statsdAddr="
+#    - "app.datadog.tracingAgentAddr="
+#    - "app.secretsBackend=env"
+#    - "app.secretsMapping={{ .ID }}"
+#    - "app.operationTimeoutOverride=10m"
+#    - "app.uiBaseUrl=http://192.168.64.10:4000"
 
 dependencies:
   direct:
-    - repo: dollarshaveclub/furan
-      name: furan
+    - repo: Pluto-tv/furan
+      name: service-furan
       value_overrides:
-        - 'app.builder_image='
-        - "vault.address=http://dollarshaveclub-furan-vault:8200"
-    - chart_repo_path: 'kubernetes/charts@9e28c906fc7a8e62e77a0743cd4b3bd38fbba008:stable/postgresql'
-      chart_vars_repo_path: 'kubernetes/charts@9e28c906fc7a8e62e77a0743cd4b3bd38fbba008:stable/postgresql/values.yaml'
+        - 'app.builderImage='
+    - name: postgres-acyl
+      chart_repo_path: 'helm/charts@master:stable/postgresql'
       value_overrides:
-        - "image.tag=9.6"
+        - "image.tag=11"
         - "postgresqlPassword=root"
         - "postgresqlDatabase=acyl"
         - "persistence.enabled=false"
-        - "fullnameOverride=postgresql-postgresql"
+        - "fullnameOverride=postgresql-acyl"
 
 notifications:
   github:

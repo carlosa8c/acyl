@@ -3,7 +3,7 @@ package spawner
 import (
 	"context"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 )
 
 var _ EnvironmentSpawner = &FakeEnvironmentSpawner{}

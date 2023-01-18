@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/DavidHuie/gomigrate"
-	"github.com/dollarshaveclub/acyl/pkg/config"
+	"github.com/Pluto-tv/acyl/pkg/config"
 	"github.com/spf13/cobra"
 
 	"database/sql"
@@ -24,7 +24,7 @@ var rollbackPGConfig config.PGConfig
 func init() {
 	pgRollbackCmd.PersistentFlags().StringVar(
 		&rollbackPGConfig.PostgresURI, "postgres-uri",
-		"postgresql://acyl:acyl@localhost:5432?sslmode=disable",
+		os.Getenv("DB_URI"),
 		"the address to the Postgres database",
 	)
 	pgRollbackCmd.PersistentFlags().StringVar(

@@ -3,7 +3,7 @@ package metrics
 import (
 	"time"
 
-	"github.com/dollarshaveclub/acyl/pkg/models"
+	"github.com/Pluto-tv/acyl/pkg/models"
 )
 
 var _ Collector = &FakeCollector{}
@@ -28,7 +28,9 @@ func (fc *FakeCollector) Reaped(name, repo string, reason models.QADestroyReason
 func (fc *FakeCollector) TimeContainerBuildAll(name, repo, ref string, err *error) func() {
 	return func() {}
 }
-func (fc *FakeCollector) TimeProvisioning(name, repo, ref string, err *error) func() { return func() {} }
+func (fc *FakeCollector) TimeProvisioning(name, repo, ref string, err *error) func() {
+	return func() {}
+}
 func (fc *FakeCollector) TimeContainerBuild(name, repo, ref, depRepo, depRef string, err *error) func() {
 	return func() {}
 }

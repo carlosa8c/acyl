@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,33 +10,42 @@ import (
 	"github.com/go-pg/pg/types"
 )
 
+var errModelNil = errors.New("pg: Model(nil)")
+
 type useQueryOne interface {
 	useQueryOne() bool
 }
 
-type Model interface {
-	ColumnScanner
-
+type HooklessModel interface {
+	// Init is responsible to initialize/reset model state.
+	// It is called only once no matter how many rows
+	// were returned by database.
 	Init() error
 
 	// NewModel returns ColumnScanner that is used to scan columns
-	// from the current row.
+	// from the current row. It is called once for every row.
 	NewModel() ColumnScanner
 
-	// AddModel adds ColumnScanner to the Collection.
+	// AddModel adds ColumnScanner created by NewModel to the Collection.
 	AddModel(ColumnScanner) error
+}
 
-	AfterQuery(DB) error
-	AfterSelect(DB) error
+type Model interface {
+	HooklessModel
 
-	BeforeInsert(DB) error
-	AfterInsert(DB) error
+	AfterQuery(context.Context, DB) error
 
-	BeforeUpdate(DB) error
-	AfterUpdate(DB) error
+	BeforeSelectQuery(context.Context, DB, *Query) (*Query, error)
+	AfterSelect(context.Context, DB) error
 
-	BeforeDelete(DB) error
-	AfterDelete(DB) error
+	BeforeInsert(context.Context, DB) error
+	AfterInsert(context.Context, DB) error
+
+	BeforeUpdate(context.Context, DB) error
+	AfterUpdate(context.Context, DB) error
+
+	BeforeDelete(context.Context, DB) error
+	AfterDelete(context.Context, DB) error
 }
 
 func NewModel(values ...interface{}) (Model, error) {
@@ -47,13 +57,15 @@ func NewModel(values ...interface{}) (Model, error) {
 	switch v0 := v0.(type) {
 	case Model:
 		return v0, nil
-	case sql.Scanner:
+	case HooklessModel:
+		return newModelWithHookStubs(v0), nil
+	case types.ValueScanner, sql.Scanner:
 		return Scan(v0), nil
 	}
 
 	v := reflect.ValueOf(v0)
 	if !v.IsValid() {
-		return nil, errors.New("pg: Model(nil)")
+		return nil, errModelNil
 	}
 	if v.Kind() != reflect.Ptr {
 		return nil, fmt.Errorf("pg: Model(non-pointer %T)", v0)
@@ -62,27 +74,29 @@ func NewModel(values ...interface{}) (Model, error) {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		return newStructTableModelValue(v), nil
+		if v.Type() != timeType {
+			return newStructTableModelValue(v), nil
+		}
 	case reflect.Slice:
 		typ := v.Type()
-		structType := indirectType(typ.Elem())
-		if structType.Kind() == reflect.Struct && structType != timeType {
-			m := sliceTableModel{
-				structTableModel: structTableModel{
-					table: Tables.Get(structType),
-					root:  v,
-				},
-				slice: v,
-			}
-			m.init(typ)
-			return &m, nil
+		elemType := indirectType(typ.Elem())
+		if elemType.Kind() == reflect.Struct && elemType != timeType {
+			return newSliceTableModel(v, elemType), nil
 		} else {
-			return &sliceModel{
-				slice: v,
-				scan:  types.Scanner(structType),
-			}, nil
+			return newSliceModel(v, elemType), nil
 		}
 	}
 
 	return Scan(v0), nil
+}
+
+type modelWithHookStubs struct {
+	hookStubs
+	HooklessModel
+}
+
+func newModelWithHookStubs(m HooklessModel) Model {
+	return modelWithHookStubs{
+		HooklessModel: m,
+	}
 }
