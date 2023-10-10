@@ -7,7 +7,7 @@ require (
 	github.com/DavidHuie/gomigrate v0.0.0-20160809001028-4004e6142040
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Pluto-tv/furan v0.6.0
-	github.com/Pluto-tv/furan/v2 v2.3.4
+	github.com/Pluto-tv/furan/v2 v2.3.5
 	github.com/Pluto-tv/metahelm v0.7.5
 	github.com/Pluto-tv/pvc v1.0.1
 	github.com/alecthomas/chroma v0.10.0

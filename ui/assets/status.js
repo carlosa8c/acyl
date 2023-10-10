@@ -863,6 +863,18 @@ function podRow(podValues) {
     return trPod;
 }
 
+// renderNoPodList returns placeholder message when no pods are returned
+function renderNoPodList(envname) {
+    let nplTBody = document.createElement("tbody");
+    nplTBody.id = "npl-tbody";
+    let nplTRMessage = document.createElement("tr");
+    nplTRMessage.id = "npl-heading";
+    nplTRMessage.className = "tr-npl";
+    nplTRMessage.innerHTML = `No pods to display for ${envname}`;
+    nplTBody.appendChild(nplTRMessage);
+    setPodList(nplTBody);
+}
+
 // renderPodList renders the pod table rows with the pod data
 function renderPodList(pods) {
     let tbody = document.createElement("tbody");
@@ -886,10 +898,10 @@ function renderPodList(pods) {
 }
 
 // getNamespacePods gets and renders the namespace pod list
-function getNamespacePods(env_name) {
+function getNamespacePods(envname) {
     let req = new XMLHttpRequest();
 
-    req.open('GET', `${apiBaseURL}/v2/userenvs/${env_name}/namespace/pods`, true);
+    req.open('GET', `${apiBaseURL}/v2/userenvs/${envname}/namespace/pods`, true);
     req.onload = function (e) {
         if (req.status !== 200) {
             console.log(`namespace pods request failed: ${req.status}: ${req.responseText}`);
@@ -897,12 +909,14 @@ function getNamespacePods(env_name) {
         }
 
         let podListData = JSON.parse(req.response);
-        if (podListData !== null) {
+        if (Object.keys(podListData).length === 0) {
+            renderNoPodList(envname);
+        } else {
             renderPodList(podListData);
         }
     };
     req.onerror = function (e) {
-        console.error(`error getting namespace pod endpoint for ${env_name}: ${req.statusText}`);
+        console.error(`error getting namespace pod endpoint for ${envname}: ${req.statusText}`);
     };
 
     req.send();

@@ -135,8 +135,8 @@ github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMo
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/Pluto-tv/furan v0.6.0 h1:1zTSBcHuizLS99DJHivX7t7Y0uD6s4ux4J3JbVJ+xHQ=
 github.com/Pluto-tv/furan v0.6.0/go.mod h1:nibnki25EXzz1WUTPKERx2EJ1vwLMl34S31vhV3A0gE=
-github.com/Pluto-tv/furan/v2 v2.3.4 h1:P1Bbb45Dqqbo5FQH54wu9ZtZjI6DAeUTfm0xuCYHPOw=
-github.com/Pluto-tv/furan/v2 v2.3.4/go.mod h1:M6P84kY0Ausv10iw6m/8tCKs4DEJ0uzp571yToCGSwU=
+github.com/Pluto-tv/furan/v2 v2.3.5 h1:WcIyhAu0KOM+hL7FppGWRRQzlaG7NlqWn9/l6yTeHSU=
+github.com/Pluto-tv/furan/v2 v2.3.5/go.mod h1:M6P84kY0Ausv10iw6m/8tCKs4DEJ0uzp571yToCGSwU=
 github.com/Pluto-tv/metahelm v0.7.5 h1:vEfE0aNrPGOiyhWMY9LHH9tJ80KWYnbCKMyoySZvbJA=
 github.com/Pluto-tv/metahelm v0.7.5/go.mod h1:fHEbXhXljdBLFFwZwafK+7Qp+NUOlW6+fBZxa3eVNpg=
 github.com/Pluto-tv/pvc v1.0.1 h1:kw4AXUWiij3JXnfsdSEgd39YcSeIaU+omOXx5WVtBss=

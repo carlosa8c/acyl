@@ -6,7 +6,7 @@ target_branches:
 
 application:
   chart_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl'
-  chart_vars_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl/environments/values-dqa.yaml'
+  chart_vars_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl/environments/values-acyl.yaml'
   image: '972525491246.dkr.ecr.us-east-1.amazonaws.com/acyl'
   value_overrides:
 # local:

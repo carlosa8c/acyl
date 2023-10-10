@@ -40,7 +40,7 @@ github.com/Microsoft/go-winio/pkg/guid
 # github.com/Pluto-tv/furan v0.6.0
 ## explicit
 github.com/Pluto-tv/furan/rpcclient
-# github.com/Pluto-tv/furan/v2 v2.3.4
+# github.com/Pluto-tv/furan/v2 v2.3.5
 ## explicit; go 1.20
 github.com/Pluto-tv/furan/v2/pkg/client
 github.com/Pluto-tv/furan/v2/pkg/config
