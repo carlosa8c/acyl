@@ -63,6 +63,8 @@ type K8sConfig struct {
 	PrivilegedRepoWhitelist []string
 	// SecretInjections is a map of secret name to value that will be injected into each environment namespace
 	SecretInjections map[string]K8sSecret
+	// NamespaceLabels is a map of labels applied to each environment namespace
+	NamespaceLabels map[string]string
 }
 
 // ProcessPrivilegedRepos takes a comma-separated list of repositories and populates the PrivilegedRepoWhitelist field
@@ -123,6 +125,25 @@ func (kc *K8sConfig) ProcessSecretInjections(sf SecretFetcher, injstr string) er
 			return errors.Wrapf(err, "error unmarshaling secret for id: %v", ssl[1])
 		}
 		kc.SecretInjections[ssl[0]] = secret
+	}
+	return nil
+}
+
+// ProcessNamespaceLabels takes a comma-separated list of namespace labels and populates the NamespaceLabels field
+func (kc *K8sConfig) ProcessNamespaceLabels(nlstr string) error {
+	kc.NamespaceLabels = make(map[string]string)
+	for i, nl := range strings.Split(nlstr, ",") {
+		if nl == "" {
+			continue
+		}
+		nstr := strings.Split(nl, "=")
+		if len(nstr) != 2 {
+			return fmt.Errorf("malformed namespace label at offset %v: %v", i, nl)
+		}
+		if len(nstr[0]) == 0 || len(nstr[1]) == 0 {
+			return fmt.Errorf("empty label at offset %v: %v", i, nl)
+		}
+		kc.NamespaceLabels[nstr[0]] = nstr[1]
 	}
 	return nil
 }

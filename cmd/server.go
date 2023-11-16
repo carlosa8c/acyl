@@ -48,7 +48,7 @@ var githubConfig config.GithubConfig
 var slackConfig config.SlackConfig
 
 var k8sConfig config.K8sConfig
-var k8sGroupBindingsStr, k8sSecretsStr, k8sPrivilegedReposStr string
+var k8sGroupBindingsStr, k8sSecretsStr, k8sPrivilegedReposStr, k8sNamespaceLabelsStr string
 
 var pgConfig config.PGConfig
 var logger *log.Logger
@@ -128,6 +128,7 @@ func init() {
 	serverCmd.PersistentFlags().BoolVar(&serverConfig.DebugEndpoints, "debug-endpoints", false, "Enable debugging HTTP endpoints (pprof)")
 	serverCmd.PersistentFlags().StringArrayVar(&serverConfig.DebugEndpointsIPWhitelists, "debug-endpoints-ip-whitelists", []string{"10.10.0.0/16", "127.0.0.1/32"}, "IP CIDR ranges to allow access to debug endpoints")
 	serverCmd.PersistentFlags().StringVar(&serverConfig.NotificationsDefaultsJSON, "nitro-notifications-defaults-json", "{}", "JSON-encoded notifications defaults for Nitro")
+	serverCmd.PersistentFlags().StringVar(&k8sNamespaceLabelsStr, "k8s-namespace-labels", "", "optional k8s labels (comma-separated) for new environment namespaces FOO=BAR,FIZZ=BUZZ format (ex: key=value)")
 	serverCmd.PersistentFlags().StringVar(&k8sGroupBindingsStr, "k8s-group-bindings", "", "optional k8s RBAC group bindings (comma-separated) for new environment namespaces in GROUP1=CLUSTER_ROLE1,GROUP2=CLUSTER_ROLE2 format (ex: users=edit) (Nitro)")
 	serverCmd.PersistentFlags().StringVar(&k8sSecretsStr, "k8s-secret-injections", "", "optional k8s secret injections (comma-separated) for new environment namespaces in SECRET_NAME=VAULT_ID (Vault path using secrets mapping) format. Secret value in Vault must be a JSON-encoded object with two keys: 'data' (map of string to base64-encoded bytes), 'type' (string). (Nitro)")
 	serverCmd.PersistentFlags().StringVar(&k8sPrivilegedReposStr, "k8s-privileged-repo-whitelist", "Pluto-tv/acyl", "optional comma-separated whitelist of GitHub repositories whose environment service accounts will be allowed cluster-admin privileges (Nitro)")
@@ -251,7 +252,10 @@ func server(cmd *cobra.Command, args []string) {
 	if err := k8sConfig.ProcessSecretInjections(sc, k8sSecretsStr); err != nil {
 		log.Fatalf("error in k8s secret injections: %v", err)
 	}
-	ci, err := metahelm.NewChartInstaller(ib, dl, fs, nmc, k8sConfig.GroupBindings, k8sConfig.PrivilegedRepoWhitelist, k8sConfig.SecretInjections, k8sClientConfig.JWTPath, true, helmClientConfig)
+	if err := k8sConfig.ProcessNamespaceLabels(k8sNamespaceLabelsStr); err != nil {
+		log.Fatalf("error in k8s namespace labels: %v", err)
+	}
+	ci, err := metahelm.NewChartInstaller(ib, dl, fs, nmc, k8sConfig.GroupBindings, k8sConfig.PrivilegedRepoWhitelist, k8sConfig.SecretInjections, k8sConfig.NamespaceLabels, k8sClientConfig.JWTPath, true, helmClientConfig)
 	if err != nil {
 		log.Fatalf("error getting metahelm chart installer: %v", err)
 	}

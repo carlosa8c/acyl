@@ -1175,6 +1175,21 @@ func TestMetahelmSetupNamespace(t *testing.T) {
 	}
 }
 
+func TestMetahelmSetupNamespaceWithLabels(t *testing.T) {
+	ns := "nitro-foo"
+	dl := persistence.NewFakeDataLayer()
+	fkc := fake.NewSimpleClientset(&v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: ns}})
+	k8scfg := config.K8sConfig{}
+	k8scfg.ProcessGroupBindings("foo=edit,bar=read")
+	k8scfg.ProcessPrivilegedRepos("testdata/chart")
+	k8scfg.ProcessSecretInjections(&fakeSecretFetcher{}, "mysecret=some/vault/path")
+	k8scfg.ProcessNamespaceLabels("label-foo=foo,label-bar=bar")
+	ci := ChartInstaller{kc: fkc, dl: dl, k8sgroupbindings: k8scfg.GroupBindings, k8srepowhitelist: k8scfg.PrivilegedRepoWhitelist, k8ssecretinjs: k8scfg.SecretInjections, k8snamespacelabels: k8scfg.NamespaceLabels}
+	if err := ci.setupNamespace(context.Background(), "some-name", "testdata/chart", ns); err != nil {
+		t.Fatalf("should have succeeded: %v", err)
+	}
+}
+
 func TestMetahelmCleanup(t *testing.T) {
 	maxAge := 1 * time.Hour
 	expires := time.Now().UTC().Add(-(maxAge + (72 * time.Hour)))

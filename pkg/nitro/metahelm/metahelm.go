@@ -85,40 +85,42 @@ const (
 
 // ChartInstaller is an object that manages namespaces and install/upgrades/deletes metahelm chart graphs
 type ChartInstaller struct {
-	ib               images.Builder
-	kc               kubernetes.Interface
-	rcfg             *rest.Config
-	kcf              K8sClientFactoryFunc
-	dl               persistence.DataLayer
-	fs               billy.Filesystem
-	mc               metrics.Collector
-	k8sgroupbindings map[string]string
-	k8srepowhitelist []string
-	k8ssecretinjs    map[string]config.K8sSecret
-	mhmf             MetahelmManagerFactoryFunc
-	hccfg            config.HelmClientConfig
+	ib                 images.Builder
+	kc                 kubernetes.Interface
+	rcfg               *rest.Config
+	kcf                K8sClientFactoryFunc
+	dl                 persistence.DataLayer
+	fs                 billy.Filesystem
+	mc                 metrics.Collector
+	k8snamespacelabels map[string]string
+	k8sgroupbindings   map[string]string
+	k8srepowhitelist   []string
+	k8ssecretinjs      map[string]config.K8sSecret
+	mhmf               MetahelmManagerFactoryFunc
+	hccfg              config.HelmClientConfig
 }
 
 var _ Installer = &ChartInstaller{}
 
 // NewChartInstaller returns a ChartInstaller configured with an in-cluster K8s clientset
-func NewChartInstaller(ib images.Builder, dl persistence.DataLayer, fs billy.Filesystem, mc metrics.Collector, k8sGroupBindings map[string]string, k8sRepoWhitelist []string, k8sSecretInjs map[string]config.K8sSecret, k8sJWTPath string, enableK8sTracing bool, hccfg config.HelmClientConfig) (*ChartInstaller, error) {
+func NewChartInstaller(ib images.Builder, dl persistence.DataLayer, fs billy.Filesystem, mc metrics.Collector, k8sGroupBindings map[string]string, k8sRepoWhitelist []string, k8sSecretInjs map[string]config.K8sSecret, k8sNamespaceLabels map[string]string, k8sJWTPath string, enableK8sTracing bool, hccfg config.HelmClientConfig) (*ChartInstaller, error) {
 	kc, rcfg, err := NewInClusterK8sClientset(k8sJWTPath, enableK8sTracing)
 	if err != nil {
 		return nil, fmt.Errorf("error getting k8s client: %w", err)
 	}
 	return &ChartInstaller{
-		ib:               ib,
-		kc:               kc,
-		rcfg:             rcfg,
-		dl:               dl,
-		fs:               fs,
-		mc:               mc,
-		k8sgroupbindings: k8sGroupBindings,
-		k8srepowhitelist: k8sRepoWhitelist,
-		k8ssecretinjs:    k8sSecretInjs,
-		mhmf:             NewInClusterHelmConfiguration,
-		hccfg:            hccfg,
+		ib:                 ib,
+		kc:                 kc,
+		rcfg:               rcfg,
+		dl:                 dl,
+		fs:                 fs,
+		mc:                 mc,
+		k8snamespacelabels: k8sNamespaceLabels,
+		k8sgroupbindings:   k8sGroupBindings,
+		k8srepowhitelist:   k8sRepoWhitelist,
+		k8ssecretinjs:      k8sSecretInjs,
+		mhmf:               NewInClusterHelmConfiguration,
+		hccfg:              hccfg,
 	}, nil
 }
 
@@ -696,11 +698,17 @@ func (ci ChartInstaller) createNamespace(ctx context.Context, envname string) (s
 	if err := ci.dl.AddEvent(ctx, envname, "creating namespace: "+nsn); err != nil {
 		ci.log(ctx, "error adding create namespace event: %v: %v", envname, err.Error())
 	}
+	labels := map[string]string{
+		objLabelKey: objLabelValue,
+	}
+	if ci.k8snamespacelabels != nil {
+		for k, v := range ci.k8snamespacelabels {
+			labels[k] = v
+		}
+	}
 	ns := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				objLabelKey: objLabelValue,
-			},
+			Labels: labels,
 		},
 	}
 	ns.Name = nsn
@@ -754,6 +762,12 @@ func (ci ChartInstaller) isRepoPrivileged(repo string) bool {
 func (ci ChartInstaller) setupNamespace(ctx context.Context, envname, repo, ns string) error {
 	ci.log(ctx, "setting up namespace: %v", ns)
 
+	// log additional namespace labels
+	if ci.k8snamespacelabels != nil {
+		for k, v := range ci.k8snamespacelabels {
+			ci.log(ctx, "namespace label appended: '%v: %v'", k, v)
+		}
+	}
 	// create service account
 	ci.log(ctx, "creating service account: %v", serviceAccount)
 	if _, err := ci.kc.CoreV1().ServiceAccounts(ns).Create(ctx, &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: serviceAccount}}, metav1.CreateOptions{}); err != nil {
