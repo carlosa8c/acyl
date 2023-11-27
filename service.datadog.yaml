@@ -1,0 +1,21 @@
+schema-version: v2.1
+dd-service: service-acyl
+team: infra-team
+tier: "2"
+tags:
+  - "service:service-acyl"
+contacts:
+  - type: slack
+    contact: "https://plutotv.slack.com/archives/devops-requests"
+  - type: email
+    contact: team-devops_embed@pluto.tv
+links:
+  - url: "https://plutotv.atlassian.net/wiki/spaces/RUN/pages/2869395511/Ephemeral+Environments+Tool"
+    type: "runbook"
+    name: "team runbook"
+  - url: "https://github.com/Pluto-tv/acyl"
+    type: "repo"
+    name: "service-acyl"
+integrations:
+  pagerduty:
+    service-url: "https://plutotv.pagerduty.com/service-directory/P3082T6"
