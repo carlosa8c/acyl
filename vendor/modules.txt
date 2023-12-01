@@ -48,6 +48,9 @@ github.com/Pluto-tv/furan/v2/pkg/datalayer
 github.com/Pluto-tv/furan/v2/pkg/generated/furanrpc
 github.com/Pluto-tv/furan/v2/pkg/grpc
 github.com/Pluto-tv/furan/v2/pkg/models
+# github.com/Pluto-tv/line v0.0.2
+## explicit
+github.com/Pluto-tv/line
 # github.com/Pluto-tv/metahelm v0.7.5
 ## explicit; go 1.20
 github.com/Pluto-tv/metahelm/pkg/dag
@@ -244,9 +247,6 @@ github.com/docker/go-metrics
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
-# github.com/dollarshaveclub/line v0.0.0-20171219191008-fc7a351a8b58
-## explicit
-github.com/dollarshaveclub/line
 # github.com/dsnet/compress v0.0.1
 ## explicit; go 1.9
 github.com/dsnet/compress

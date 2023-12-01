@@ -1,14 +1,14 @@
 # line   &nbsp;<img src="doc/images/line-v.png" width="25" height="25"/>
-[![GoDoc](https://godoc.org/github.com/dollarshaveclub/line?status.svg)](http://godoc.org/github.com/dollarshaveclub/line)
-[![CircleCI](https://circleci.com/gh/dollarshaveclub/line/tree/master.svg?style=shield)](https://circleci.com/gh/dollarshaveclub/line/tree/master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/dollarshaveclub/line)](https://goreportcard.com/report/github.com/dollarshaveclub/line)
+[![GoDoc](https://godoc.org/github.com/Pluto-tv/line?status.svg)](http://godoc.org/github.com/Pluto-tv/line)
+[![CircleCI](https://circleci.com/gh/Pluto-tv/line/tree/master.svg?style=shield)](https://circleci.com/gh/Pluto-tv/line/tree/master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Pluto-tv/line)](https://goreportcard.com/report/github.com/Pluto-tv/line)
 
 line is an easy to use package for stylizing terminal output. line focuses on usability via chaining and, consequently, is quite flexible. line also boasts compatibility with the popular [Color](https://github.com/fatih/color) package.
 
 ## Install
 
 ```bash
-go get github.com/dollarshaveclub/line
+go get github.com/Pluto-tv/line
 ```
 
 ## Usage
@@ -18,7 +18,7 @@ go get github.com/dollarshaveclub/line
 ```go
 package main
 
-import "github.com/dollarshaveclub/line"
+import "github.com/Pluto-tv/line"
 
 func main() {
     line.Red().Print("Hello ").Green("World").Blue().Println("!!!")
@@ -31,7 +31,7 @@ func main() {
 ```go
 package main
 
-import "github.com/dollarshaveclub/line"
+import "github.com/Pluto-tv/line"
 
 func main() {
 	line.Prefix("--> ").Suffix(" <---").Println("Nice to meet you!").Println("And you too!")
@@ -47,7 +47,7 @@ package main
 import (
 	"os"
 
-	"github.com/dollarshaveclub/line"
+	"github.com/Pluto-tv/line"
 	"github.com/fatih/color"
 )
 

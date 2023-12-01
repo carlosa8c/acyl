@@ -65,7 +65,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.2
 )
 
-require github.com/dollarshaveclub/line v0.0.0-20171219191008-fc7a351a8b58
+require github.com/Pluto-tv/line v0.0.2
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230106234847-43070de90fa1 // indirect

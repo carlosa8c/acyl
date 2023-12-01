@@ -137,6 +137,8 @@ github.com/Pluto-tv/furan v0.6.0 h1:1zTSBcHuizLS99DJHivX7t7Y0uD6s4ux4J3JbVJ+xHQ=
 github.com/Pluto-tv/furan v0.6.0/go.mod h1:nibnki25EXzz1WUTPKERx2EJ1vwLMl34S31vhV3A0gE=
 github.com/Pluto-tv/furan/v2 v2.3.5 h1:WcIyhAu0KOM+hL7FppGWRRQzlaG7NlqWn9/l6yTeHSU=
 github.com/Pluto-tv/furan/v2 v2.3.5/go.mod h1:M6P84kY0Ausv10iw6m/8tCKs4DEJ0uzp571yToCGSwU=
+github.com/Pluto-tv/line v0.0.2 h1:8lVG8wiYxGVMeF8AvAIrNJhMo3t2zoAp8LKpbv4V6Os=
+github.com/Pluto-tv/line v0.0.2/go.mod h1:ySdz6DgduXe6ISLGf352+lD8y8BSR5xl0ESbq9TPjS8=
 github.com/Pluto-tv/metahelm v0.7.5 h1:vEfE0aNrPGOiyhWMY9LHH9tJ80KWYnbCKMyoySZvbJA=
 github.com/Pluto-tv/metahelm v0.7.5/go.mod h1:fHEbXhXljdBLFFwZwafK+7Qp+NUOlW6+fBZxa3eVNpg=
 github.com/Pluto-tv/pvc v1.0.1 h1:kw4AXUWiij3JXnfsdSEgd39YcSeIaU+omOXx5WVtBss=
@@ -455,8 +457,6 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1 h1:ZClxb8laGDf5arXfYcAtECDFgAgHklGI8CxgjHnXKJ4=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
-github.com/dollarshaveclub/line v0.0.0-20171219191008-fc7a351a8b58 h1:kdoBBSdDgYqswOFZ3zofDcr67jOQg9Ec/gTix8k+Nh4=
-github.com/dollarshaveclub/line v0.0.0-20171219191008-fc7a351a8b58/go.mod h1:68yw7mK5d4DoK9smWlOrFNwS3BLWVDdJ+DeRT9xybh0=
 github.com/dougm/pretty v0.0.0-20171025230240-2ee9d7453c02/go.mod h1:7NQ3kWOx2cZOSjtcveTa5nqupVr2s6/83sG+rTlI7uA=
 github.com/dsnet/compress v0.0.1 h1:PlZu0n3Tuv04TzpfPbrnI0HW/YwodEXDS+oPKahKF0Q=
 github.com/dsnet/compress v0.0.1/go.mod h1:Aw8dCMJ7RioblQeTqt88akK31OvO8Dhf5JflhBbQEHo=

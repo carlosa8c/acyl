@@ -36,10 +36,10 @@ import (
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/Pluto-tv/acyl/pkg/config"
+	"github.com/Pluto-tv/line"
 	dockerconfig "github.com/docker/cli/cli/config"
 	dockertypes "github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/dollarshaveclub/line"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
