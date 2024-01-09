@@ -101,6 +101,7 @@ type RepoConfig struct {
 	Version        uint                  `yaml:"version" json:"version"`
 	TargetBranches []string              `yaml:"target_branches" json:"target_branches"`
 	TrackBranches  []string              `json:"track_branches" yaml:"track_branches"`
+	OnBranches     []string              `yaml:"on_branches" json:"on_branches"`
 	Application    RepoConfigAppMetadata `yaml:"application" json:"application"`
 	Dependencies   DependencyDeclaration `yaml:"dependencies" json:"dependencies"`
 	Notifications  Notifications         `yaml:"notifications" json:"notifications"`

@@ -1,7 +1,11 @@
 package ghevent
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -90,6 +94,55 @@ target_branches:
   - release
   - foo-bar`)
 
+var testYAMLMultipleTargetBranchesOnBranchesSuccessBytes = []byte(`name: example-repo
+target_repo: dollarshaveclub/example-repo
+other_repos:
+  - dollarshaveclub/example-repo-2
+  - dollarshaveclub/example-repo-3
+  - dollarshaveclub/example-repo-4
+  - dollarshaveclub/example-repo-5
+  - dollarshaveclub/example-repo-6
+  - dollarshaveclub/example-repo-7
+  - dollarshaveclub/example-repo-8
+  - dollarshaveclub/example-repo-9
+target_branches:
+  - release
+  - foo-bar
+on_branches:
+  - 'release/foo/*'
+  - 'foo/*'
+  - foobar
+  - hank-*`)
+
+var testYAMLMultipleTargetBranchesOnBranchesBytes = []byte(`name: example-repo
+target_repo: dollarshaveclub/example-repo
+other_repos:
+  - dollarshaveclub/example-repo-2
+  - dollarshaveclub/example-repo-3
+  - dollarshaveclub/example-repo-4
+  - dollarshaveclub/example-repo-5
+  - dollarshaveclub/example-repo-6
+  - dollarshaveclub/example-repo-7
+  - dollarshaveclub/example-repo-8
+  - dollarshaveclub/example-repo-9
+target_branches:
+  - release
+  - foo-bar
+on_branches:
+  - 'release/foo/*'
+  - 'release/*/foo/*'
+  - 'release/foo/**'
+  - '**??++!!'
+  - '*/foo/*'
+  - foobar
+  - HANK
+  - hank/foo
+  - hank-test-test
+  - hank-test-*
+  - 'releases/hank-test/*'
+  - '*/hank-test'
+  - '*/hank-test/*'`)
+
 func newDummyRailsSiteQAType() *models.QAType {
 	qat := models.QAType{}
 	qat.FromYAML(testYAMLBytes)
@@ -118,6 +171,13 @@ func newDummyClosedGithubEvent() *GitHubEvent {
 	event := GitHubEvent{}
 	_ = json.Unmarshal([]byte(closedGithubEventJSON), &event)
 	return &event
+}
+
+func newDummyGenerateSignatureString(body []byte) string {
+	mac := hmac.New(sha1.New, []byte(testSecret))
+	mac.Write(body)
+	expectedMAC := mac.Sum(nil)
+	return "sha1=" + hex.EncodeToString(expectedMAC)
 }
 
 func newDummyPushGithubEvent(t *testing.T) ([]byte, *GitHubEvent) {
@@ -288,6 +348,73 @@ func TestNewSucceedsOpenedCreateNewTargetBranches(t *testing.T) {
 
 	if out.Action != CreateNew {
 		t.Fatalf("Expected %v but received %v", CreateNew, out.Action)
+	}
+}
+
+func TestNewSucceedsOpenedCreateNewTargetBranchesOnBranches(t *testing.T) {
+	hook, rc, ctrl := newTestGitHubEventWebhook(t, testSecret, testTypePath)
+	defer ctrl.Finish()
+	rc.EXPECT().GetFileContents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(testYAMLMultipleTargetBranchesOnBranchesSuccessBytes, nil)
+
+	out, err := hook.New([]byte(openedGithubEventJSON), uuid.Must(uuid.NewRandom()), "sha1=b76269055fa8fcf1f9c347416986ae7743a9f0b6")
+	if err != nil {
+		t.Fatalf("Encountered unexpected error %v", err)
+	}
+
+	if out.Action != CreateNew {
+		t.Fatalf("Expected %v but received %v", CreateNew, out.Action)
+	}
+}
+
+func TestNewSucceedsVariationsOpenedCreateNewTargetBranchesOnBranches(t *testing.T) {
+	branches := []string{
+		"hank-test",
+		"release/foo/wildcard",
+		"foo/wildcard",
+		"foobar",
+		"hank-foo",
+	}
+	for _, b := range branches {
+		ctj := GitHubEvent{}
+		err := json.Unmarshal([]byte(openedGithubEventJSON), &ctj)
+		fmt.Sprint(ctj)
+		if err != nil {
+			t.Fatalf("Encountered unexpected error %v", err)
+		}
+		ctj.PullRequest.Head.Ref = fmt.Sprint(b)
+		ctjm, err := json.Marshal(&ctj)
+		if err != nil {
+			t.Fatalf("Encountered unexpected error %v", err)
+		}
+		sig := newDummyGenerateSignatureString(ctjm)
+
+		hook, rc, ctrl := newTestGitHubEventWebhook(t, testSecret, testTypePath)
+		defer ctrl.Finish()
+		rc.EXPECT().GetFileContents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(testYAMLMultipleTargetBranchesOnBranchesSuccessBytes, nil)
+
+		out, err := hook.New(ctjm, uuid.Must(uuid.NewRandom()), sig)
+		if err != nil {
+			t.Fatalf("Encountered unexpected error %v", err)
+		}
+
+		if out.Action != CreateNew {
+			t.Fatalf("Expected %v but received %v", CreateNew, out.Action)
+		}
+	}
+}
+
+func TestNewFailureOpenedCreateNewTargetBranchesOnBranches(t *testing.T) {
+	hook, rc, ctrl := newTestGitHubEventWebhook(t, testSecret, testTypePath)
+	defer ctrl.Finish()
+	rc.EXPECT().GetFileContents(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(testYAMLMultipleTargetBranchesOnBranchesBytes, nil)
+
+	out, err := hook.New([]byte(openedGithubEventJSON), uuid.Must(uuid.NewRandom()), "sha1=b76269055fa8fcf1f9c347416986ae7743a9f0b6")
+	if err != nil {
+		t.Fatalf("Encountered unexpected error %v", err)
+	}
+
+	if out.Action != NotRelevant {
+		t.Fatalf("Expected %v but received %v", NotRelevant, out.Action)
 	}
 }
 

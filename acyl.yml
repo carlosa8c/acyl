@@ -4,6 +4,11 @@ version: 2
 target_branches:
   - master
 
+on_branches:
+  - 'debug/*'
+  - 'feature/*'
+  - 'hotfix/*'
+
 application:
   chart_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl'
   chart_vars_repo_path: 'Pluto-tv/kvetch@main:charts/v2/devops/acyl/environments/values-acyl.yaml'
@@ -22,7 +27,6 @@ application:
 dependencies:
   direct:
     - repo: Pluto-tv/furan
-      name: service-furan
       value_overrides:
         - 'app.builderImage='
     - name: postgres-acyl

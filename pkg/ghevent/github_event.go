@@ -7,14 +7,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
-
 	"github.com/Pluto-tv/acyl/pkg/eventlogger"
 	"github.com/Pluto-tv/acyl/pkg/ghclient"
 	"github.com/Pluto-tv/acyl/pkg/models"
 	"github.com/Pluto-tv/acyl/pkg/persistence"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"os"
+	"regexp"
 )
 
 // ActionType enumerates the different actions we need to take
@@ -147,8 +147,18 @@ func (ge *GitHubEventWebhook) checkRelevancyPR(log func(string, ...interface{}),
 	}
 	for _, tb := range qat.TargetBranches {
 		if tb == event.PullRequest.Base.Ref {
-			log("PR base branch found in target branches: %v", tb)
-			return true
+			if qat.OnBranches != nil {
+				for _, ob := range qat.OnBranches {
+					r := regexp.MustCompile(fmt.Sprintf("^%v?", regexp.QuoteMeta(ob)))
+					if r.MatchString(event.PullRequest.Head.Ref) {
+						log("PR base branch found in target branches: %v, with matching on branch condition: %v", tb, ob)
+						return true
+					}
+				}
+			} else {
+				log("PR base branch found in target branches: %v", tb)
+				return true
+			}
 		}
 	}
 	log("PR base branch not found in target branches: %v", event.PullRequest.Base.Ref)

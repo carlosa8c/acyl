@@ -365,6 +365,7 @@ type QAType struct {
 	OtherRepos      []string          `json:"other_repos" yaml:"other_repos"`           // Any other repos used by the template that require images built or branch coordination
 	TargetBranch    string            `json:"target_branch" yaml:"target_branch"`       // Branch to watch on target repo
 	TargetBranches  []string          `json:"target_branches" yaml:"target_branches"`   // Branch list to watch on target repo
+	OnBranches      []string          `yaml:"on_branches" json:"on_branches"`           // On Branch naming conventions to match against on target repo
 	BranchOverrides map[string]string `json:"branch_overrides" yaml:"branch_overrides"` // Map of repo name to override branch (Instead of using base branch of PR, fallback to this branch)
 	EnvType         string            `json:"env_type" yaml:"env_type"`
 	TrackRefs       []string          `json:"track_refs" yaml:"track_refs"` // Create an environment for each of these refs (branch/tag) and keep it continuously updated as commits are pushed
