@@ -377,7 +377,6 @@ func TestNewSucceedsVariationsOpenedCreateNewTargetBranchesOnBranches(t *testing
 	for _, b := range branches {
 		ctj := GitHubEvent{}
 		err := json.Unmarshal([]byte(openedGithubEventJSON), &ctj)
-		fmt.Sprint(ctj)
 		if err != nil {
 			t.Fatalf("Encountered unexpected error %v", err)
 		}
